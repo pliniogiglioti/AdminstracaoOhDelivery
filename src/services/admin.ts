@@ -60,7 +60,8 @@ interface OrderRow {
 interface ProfileRow {
   id: string
   email: string | null
-  name: string | null
+  name?: string | null
+  full_name?: string | null
   phone: string | null
   roles: UserRole[] | null
   created_at: string
@@ -224,7 +225,7 @@ export async function fetchPartners(): Promise<AdminPartner[]> {
   const [profilesResult, storesResult] = await Promise.all([
     supabaseClient
       .from('profiles')
-      .select('id,email,name,phone,roles,created_at')
+      .select('*')
       .contains('roles', ['store_owner'])
       .order('created_at', { ascending: false }),
     supabaseClient.from('stores').select('id,partner_email'),
@@ -242,7 +243,7 @@ export async function fetchPartners(): Promise<AdminPartner[]> {
   return ((profilesResult.data ?? []) as ProfileRow[]).map((profile) => ({
     id: profile.id,
     email: profile.email ?? '',
-    name: profile.name,
+    name: profile.name ?? profile.full_name ?? null,
     phone: profile.phone,
     roles: profile.roles ?? [],
     createdAt: profile.created_at,

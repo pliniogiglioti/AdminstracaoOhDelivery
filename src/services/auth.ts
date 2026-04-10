@@ -4,7 +4,8 @@ import type { AdminAuthUser, Profile, UserRole } from '@/types'
 interface ProfileRow {
   id: string
   email: string | null
-  name: string | null
+  name?: string | null
+  full_name?: string | null
   phone: string | null
   roles: UserRole[] | null
   created_at: string
@@ -25,7 +26,7 @@ function mapProfile(row: ProfileRow): Profile {
   return {
     id: row.id,
     email: row.email ?? '',
-    name: row.name,
+    name: row.name ?? row.full_name ?? null,
     phone: row.phone,
     roles: row.roles ?? [],
     createdAt: row.created_at,
@@ -44,7 +45,7 @@ async function getProfile(userId: string) {
   const client = assertSupabase()
   const { data, error } = await client
     .from('profiles')
-    .select('id,email,name,phone,roles,created_at')
+    .select('*')
     .eq('id', userId)
     .maybeSingle()
 
@@ -120,4 +121,3 @@ export async function signOutAdmin() {
     throw error
   }
 }
-
