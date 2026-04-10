@@ -1,0 +1,95 @@
+export type UserRole = 'customer' | 'store_owner' | 'delivery' | 'admin'
+export type RegistrationStatus = 'pendente' | 'aprovado' | 'rejeitado'
+
+export interface Profile {
+  id: string
+  email: string
+  name: string | null
+  phone: string | null
+  roles: UserRole[]
+  createdAt: string
+}
+
+export interface AdminAuthUser {
+  id: string
+  email: string
+  name: string
+  profile: Profile
+}
+
+export interface AdminStore {
+  id: string
+  name: string
+  slug: string | null
+  categoryId: string | null
+  categoryName: string | null
+  tagline: string | null
+  partnerEmail: string | null
+  partnerName: string | null
+  registrationStatus: RegistrationStatus
+  rejectionReason: string | null
+  isOpen: boolean
+  active: boolean
+  deliveryFee: number | null
+  etaMin: number | null
+  etaMax: number | null
+  addressStreet: string | null
+  addressNeighborhood: string | null
+  addressCity: string | null
+  addressState: string | null
+  addressZip: string | null
+  createdAt: string
+  updatedAt: string | null
+}
+
+export interface StoreCategory {
+  id: string
+  name: string
+  icon: string
+  sortOrder: number
+  active: boolean
+}
+
+export interface AdminOrder {
+  id: string
+  orderCode: string | null
+  storeId: string | null
+  storeName: string | null
+  customerName: string | null
+  status: string | null
+  totalAmount: number
+  paymentMethod: string | null
+  fulfillmentType: string | null
+  createdAt: string
+}
+
+export interface AdminPartner {
+  id: string
+  name: string | null
+  email: string
+  phone: string | null
+  roles: UserRole[]
+  createdAt: string
+  storeCount: number
+}
+
+export interface DashboardMetrics {
+  pendingStores: number
+  approvedStores: number
+  registeredPartners: number
+  todayOrders: number
+}
+
+export interface StoreOption {
+  id: string
+  name: string
+}
+
+export type AdminSection =
+  | 'dashboard'
+  | 'aprovacoes'
+  | 'lojas'
+  | 'parceiros'
+  | 'categorias'
+  | 'pedidos'
+
