@@ -107,4 +107,5 @@ export type AdminSection =
   | 'categorias'
   | 'pedidos'
   | 'suporte'
+  | 'financeiro'
 

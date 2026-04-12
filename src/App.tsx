@@ -3,6 +3,7 @@ import { AdminLayout } from '@/components/admin/AdminLayout'
 import { ApprovalsPage } from '@/pages/app/ApprovalsPage'
 import { CategoriesPage } from '@/pages/app/CategoriesPage'
 import { DashboardPage } from '@/pages/app/DashboardPage'
+import { FinancialPage } from '@/pages/app/FinancialPage'
 import { OrdersPage } from '@/pages/app/OrdersPage'
 import { PartnersPage } from '@/pages/app/PartnersPage'
 import { StoresPage } from '@/pages/app/StoresPage'
@@ -21,6 +22,7 @@ export function App() {
           <Route path="parceiros" element={<PartnersPage />} />
           <Route path="categorias" element={<CategoriesPage />} />
           <Route path="pedidos" element={<OrdersPage />} />
+          <Route path="financeiro" element={<FinancialPage />} />
           <Route path="suporte" element={<SupportPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

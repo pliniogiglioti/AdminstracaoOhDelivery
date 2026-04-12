@@ -2,7 +2,7 @@ import { Eye } from 'lucide-react'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { AnimatedModal } from '@/components/admin/AnimatedModal'
-import { PageHeader, StatusBadge } from '@/components/admin/AdminUi'
+import { PageHeader } from '@/components/admin/AdminUi'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { fetchStores, updateStoreActive, updateStoreRegistration } from '@/services/admin'
 import type { AdminStore, RegistrationStatus } from '@/types'
@@ -164,11 +164,30 @@ export function StoresPage() {
             </thead>
             <tbody className="divide-y divide-ink-100">
               {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-ink-500">
-                    Carregando lojas...
-                  </td>
-                </tr>
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="px-4 py-4">
+                      <div className="h-4 w-36 rounded-full bg-ink-100" />
+                      <div className="mt-2 h-3 w-20 rounded-full bg-ink-50" />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="h-4 w-24 rounded-full bg-ink-100" />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="h-10 w-32 rounded-2xl bg-ink-100" />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="h-8 w-16 rounded-2xl bg-ink-100" />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="h-4 w-28 rounded-full bg-ink-100" />
+                      <div className="mt-2 h-3 w-36 rounded-full bg-ink-50" />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="h-10 w-24 rounded-2xl bg-ink-100" />
+                    </td>
+                  </tr>
+                ))
               ) : stores.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-6 text-center text-ink-500">
@@ -194,9 +213,6 @@ export function StoresPage() {
                         <option value="aprovado">aprovado</option>
                         <option value="rejeitado">rejeitado</option>
                       </select>
-                      <div>
-                        <StatusBadge status={store.registrationStatus} />
-                      </div>
                     </td>
                     <td className="px-4 py-4">
                       <button

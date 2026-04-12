@@ -10,6 +10,7 @@ import {
   Store,
   Tags,
   Users,
+  Wallet,
 } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
@@ -25,6 +26,7 @@ const navItems: Array<{ id: AdminSection; label: string; icon: LucideIcon; to: s
   { id: 'parceiros', label: 'Parceiros', icon: Users, to: '/app/parceiros' },
   { id: 'categorias', label: 'Categorias', icon: Tags, to: '/app/categorias' },
   { id: 'pedidos', label: 'Pedidos', icon: ClipboardList, to: '/app/pedidos' },
+  { id: 'financeiro', label: 'Financeiro', icon: Wallet, to: '/app/financeiro' },
   { id: 'suporte', label: 'Suporte', icon: Headphones, to: '/app/suporte' },
 ]
 

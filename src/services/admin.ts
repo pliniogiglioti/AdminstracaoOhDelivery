@@ -357,6 +357,33 @@ export async function updateSupportTicketStatus(id: string, status: SupportTicke
   if (error) throw error
 }
 
+export async function fetchFinancialOrders(filters: {
+  dateFrom: string
+  dateTo: string
+  storeId?: string
+  status?: string
+}): Promise<AdminOrder[]> {
+  let query = client()
+    .from('orders')
+    .select('id,order_code,store_id,store_name,customer_name,status,total_amount,payment_method,fulfillment_type,created_at')
+    .order('created_at', { ascending: false })
+    .gte('created_at', `${filters.dateFrom}T00:00:00.000Z`)
+    .lte('created_at', `${filters.dateTo}T23:59:59.999Z`)
+
+  if (filters.storeId) {
+    query = query.eq('store_id', filters.storeId)
+  }
+
+  if (filters.status) {
+    query = query.eq('status', filters.status)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+
+  return ((data ?? []) as OrderRow[]).map(mapOrder)
+}
+
 export async function fetchOrders(filters?: { storeId?: string; status?: string }): Promise<AdminOrder[]> {
   let query = client()
     .from('orders')

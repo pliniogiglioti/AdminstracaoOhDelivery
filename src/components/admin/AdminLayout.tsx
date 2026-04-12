@@ -19,7 +19,7 @@ export function AdminLayout() {
   }
 
   return (
-    <div className="min-h-dvh px-3 py-3 sm:px-4 lg:px-5">
+    <div className="min-h-dvh px-3 py-3 sm:px-4 lg:px-4">
       <div
         className={cn(
           'sidebar-shell hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:block lg:p-4',
