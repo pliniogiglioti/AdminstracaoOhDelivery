@@ -8,6 +8,8 @@ import type {
   RegistrationStatus,
   StoreCategory,
   StoreOption,
+  SupportTicket,
+  SupportTicketStatus,
   UserRole,
 } from '@/types'
 
@@ -296,6 +298,67 @@ export async function fetchStoreOptions(): Promise<StoreOption[]> {
 
   if (error) throw error
   return ((data ?? []) as Array<{ id: string; name: string }>).map((store) => ({ id: store.id, name: store.name }))
+}
+
+interface SupportTicketRow {
+  id: string
+  store_id: string
+  stores: { name: string } | null
+  protocol: string
+  title: string
+  category: string
+  description: string
+  status: string
+  created_at: string
+  updated_at: string
+}
+
+function mapSupportTicket(row: SupportTicketRow): SupportTicket {
+  return {
+    id: row.id,
+    storeId: row.store_id,
+    storeName: row.stores?.name ?? null,
+    protocol: row.protocol,
+    title: row.title,
+    category: row.category as SupportTicket['category'],
+    description: row.description,
+    status: row.status as SupportTicketStatus,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+export async function fetchSupportTickets(filters?: {
+  status?: SupportTicketStatus | 'todos'
+  category?: string
+}): Promise<SupportTicket[]> {
+  let query = client()
+    .from('support_tickets')
+    .select('id,store_id,stores(name),protocol,title,category,description,status,created_at,updated_at')
+    .order('created_at', { ascending: false })
+    .limit(300)
+
+  if (filters?.status && filters.status !== 'todos') {
+    query = query.eq('status', filters.status)
+  }
+
+  if (filters?.category) {
+    query = query.eq('category', filters.category)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+
+  return ((data ?? []) as SupportTicketRow[]).map(mapSupportTicket)
+}
+
+export async function updateSupportTicketStatus(id: string, status: SupportTicketStatus) {
+  const { error } = await client()
+    .from('support_tickets')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', id)
+
+  if (error) throw error
 }
 
 export async function fetchOrders(filters?: { storeId?: string; status?: string }): Promise<AdminOrder[]> {

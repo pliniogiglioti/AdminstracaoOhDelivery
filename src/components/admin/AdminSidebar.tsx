@@ -3,6 +3,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Headphones,
   LayoutDashboard,
   LogOut,
   ShieldCheck,
@@ -24,6 +25,7 @@ const navItems: Array<{ id: AdminSection; label: string; icon: LucideIcon; to: s
   { id: 'parceiros', label: 'Parceiros', icon: Users, to: '/app/parceiros' },
   { id: 'categorias', label: 'Categorias', icon: Tags, to: '/app/categorias' },
   { id: 'pedidos', label: 'Pedidos', icon: ClipboardList, to: '/app/pedidos' },
+  { id: 'suporte', label: 'Suporte', icon: Headphones, to: '/app/suporte' },
 ]
 
 export function AdminSidebar({
@@ -49,9 +51,9 @@ export function AdminSidebar({
         <div className={cn('sidebar-content border-b border-ink-100 pb-4 pt-5', collapsed ? 'px-3' : 'px-4')}>
           <div className={cn('flex items-center', collapsed ? 'justify-center' : 'gap-3')}>
             {!collapsed ? (
-              <div className="min-w-0 flex-1">
-                <p className="pl-3 font-display text-lg font-bold text-coral-500">ohdelivery</p>
-                <p className="pl-3 text-sm text-ink-500">Admin interno</p>
+              <div className="min-w-0 flex-1 pl-3">
+                <img src="/logo.png" alt="ohdelivery" className="h-8 w-auto" />
+                <p className="mt-1 text-sm text-ink-500">Admin interno</p>
               </div>
             ) : null}
             <button

@@ -85,6 +85,22 @@ export interface StoreOption {
   name: string
 }
 
+export type SupportTicketStatus = 'aberto' | 'em_andamento' | 'resolvido'
+export type SupportTicketCategory = 'financeiro' | 'pedido' | 'cardapio' | 'tecnico' | 'outro'
+
+export interface SupportTicket {
+  id: string
+  storeId: string
+  storeName: string | null
+  protocol: string
+  title: string
+  category: SupportTicketCategory
+  description: string
+  status: SupportTicketStatus
+  createdAt: string
+  updatedAt: string
+}
+
 export type AdminSection =
   | 'dashboard'
   | 'aprovacoes'
@@ -92,4 +108,5 @@ export type AdminSection =
   | 'parceiros'
   | 'categorias'
   | 'pedidos'
+  | 'suporte'
 
