@@ -384,6 +384,23 @@ export async function fetchFinancialOrders(filters: {
   return ((data ?? []) as OrderRow[]).map(mapOrder)
 }
 
+export async function fetchSidebarCounts(): Promise<{ pendingApprovals: number; openSupport: number }> {
+  const supabaseClient = client()
+
+  const [approvals, support] = await Promise.all([
+    supabaseClient.from('stores').select('id', { count: 'exact', head: true }).eq('registration_status', 'pendente'),
+    supabaseClient.from('support_tickets').select('id', { count: 'exact', head: true }).eq('status', 'aberto'),
+  ])
+
+  if (approvals.error) throw approvals.error
+  if (support.error) throw support.error
+
+  return {
+    pendingApprovals: approvals.count ?? 0,
+    openSupport: support.count ?? 0,
+  }
+}
+
 export async function fetchOrders(filters?: { storeId?: string; status?: string }): Promise<AdminOrder[]> {
   let query = client()
     .from('orders')

@@ -17,6 +17,7 @@ import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { AnimatedModal } from '@/components/admin/AnimatedModal'
 import { SidebarLabel } from '@/components/admin/AdminUi'
+import type { SidebarCounts } from '@/hooks/useSidebarCounts'
 import type { AdminAuthUser, AdminSection } from '@/types'
 
 const navItems: Array<{ id: AdminSection; label: string; icon: LucideIcon; to: string }> = [
@@ -30,12 +31,19 @@ const navItems: Array<{ id: AdminSection; label: string; icon: LucideIcon; to: s
   { id: 'suporte', label: 'Suporte', icon: Headphones, to: '/app/suporte' },
 ]
 
+function navBadgeCount(id: AdminSection, counts: SidebarCounts): number {
+  if (id === 'aprovacoes') return counts.pendingApprovals
+  if (id === 'suporte') return counts.openSupport
+  return 0
+}
+
 export function AdminSidebar({
   user,
   onSignOut,
   collapsed,
   onToggleCollapsed,
   onNavigate,
+  counts,
   className,
 }: {
   user: AdminAuthUser
@@ -43,6 +51,7 @@ export function AdminSidebar({
   collapsed: boolean
   onToggleCollapsed: () => void
   onNavigate?: () => void
+  counts?: SidebarCounts
   className?: string
 }) {
   const [signOutModalOpen, setSignOutModalOpen] = useState(false)
@@ -73,6 +82,7 @@ export function AdminSidebar({
         <nav className={cn('hide-scrollbar sidebar-content flex-1 space-y-1 overflow-y-auto py-4', collapsed ? 'px-2' : 'px-3')}>
           {navItems.map((item) => {
             const Icon = item.icon
+            const badge = counts ? navBadgeCount(item.id, counts) : 0
 
             return (
               <NavLink
@@ -91,9 +101,21 @@ export function AdminSidebar({
                 aria-label={item.label}
                 title={item.label}
               >
-                <Icon className="h-5 w-5" />
-                <SidebarLabel collapsed={collapsed} className="whitespace-nowrap">
-                  {item.label}
+                <span className="relative shrink-0">
+                  <Icon className="h-5 w-5" />
+                  {collapsed && badge > 0 ? (
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-coral-500 text-[10px] font-bold leading-none text-white">
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  ) : null}
+                </span>
+                <SidebarLabel collapsed={collapsed} className="flex min-w-0 flex-1 items-center gap-2 whitespace-nowrap">
+                  <span className="min-w-0 truncate">{item.label}</span>
+                  {!collapsed && badge > 0 ? (
+                    <span className="ml-auto shrink-0 rounded-full bg-coral-500 px-2 py-0.5 text-[11px] font-bold leading-none text-white">
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  ) : null}
                 </SidebarLabel>
               </NavLink>
             )

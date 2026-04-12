@@ -4,11 +4,13 @@ import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { LoadingScreen } from '@/components/admin/LoadingScreen'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { useAdminUiStore } from '@/hooks/useAdminUiStore'
+import { useSidebarCounts } from '@/hooks/useSidebarCounts'
 import { cn } from '@/lib/utils'
 
 export function AdminLayout() {
   const auth = useAdminAuth()
   const { sidebarOpen, setSidebarOpen, sidebarCollapsed, setSidebarCollapsed } = useAdminUiStore()
+  const sidebarCounts = useSidebarCounts()
 
   if (auth.loading) {
     return <LoadingScreen />
@@ -31,6 +33,7 @@ export function AdminLayout() {
           onSignOut={() => void auth.signOut()}
           collapsed={sidebarCollapsed}
           onToggleCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
+          counts={sidebarCounts}
           className="h-full"
         />
       </div>
@@ -86,6 +89,7 @@ export function AdminLayout() {
               collapsed={false}
               onToggleCollapsed={() => undefined}
               onNavigate={() => setSidebarOpen(false)}
+              counts={sidebarCounts}
               className="h-[calc(100dvh-5.5rem)]"
             />
           </div>
