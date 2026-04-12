@@ -104,7 +104,7 @@ export function AdminSidebar({
                 <span className="relative shrink-0">
                   <Icon className="h-5 w-5" />
                   {collapsed && badge > 0 ? (
-                    <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-coral-500 text-[11px] font-bold leading-none text-white">
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-coral-500 text-[10px] font-bold leading-none text-white">
                       {badge > 99 ? '99+' : badge}
                     </span>
                   ) : null}
@@ -112,7 +112,7 @@ export function AdminSidebar({
                 <SidebarLabel collapsed={collapsed} className="flex min-w-0 flex-1 items-center gap-2 whitespace-nowrap">
                   <span className="min-w-0 truncate">{item.label}</span>
                   {!collapsed && badge > 0 ? (
-                    <span className="ml-auto shrink-0 rounded-full bg-coral-500 px-2 py-0.5 text-[11px] font-bold leading-none text-white">
+                    <span className="ml-auto shrink-0 rounded-full bg-coral-500 px-2.5 py-1 text-xs font-bold leading-none text-white">
                       {badge > 99 ? '99+' : badge}
                     </span>
                   ) : null}
