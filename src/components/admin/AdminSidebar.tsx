@@ -112,7 +112,7 @@ export function AdminSidebar({
                 <SidebarLabel collapsed={collapsed} className="flex min-w-0 flex-1 items-center gap-2 whitespace-nowrap">
                   <span className="min-w-0 truncate">{item.label}</span>
                   {!collapsed && badge > 0 ? (
-                    <span className="ml-auto shrink-0 rounded-full bg-coral-500 px-2.5 py-1 text-xs font-bold leading-none text-white">
+                    <span className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-coral-500 text-[11px] font-bold leading-none text-white">
                       {badge > 99 ? '99+' : badge}
                     </span>
                   ) : null}
