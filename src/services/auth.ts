@@ -89,9 +89,21 @@ export async function getCurrentAdminUser(): Promise<AdminAuthUser | null> {
   return toAdminUser(user, profile)
 }
 
-export async function signInAdmin(email: string, password: string): Promise<AdminAuthUser> {
+export async function requestAdminOtp(email: string): Promise<void> {
   const client = assertSupabase()
-  const { data, error } = await client.auth.signInWithPassword({ email, password })
+  const { error } = await client.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: false },
+  })
+
+  if (error) {
+    throw error
+  }
+}
+
+export async function verifyAdminOtp(email: string, token: string): Promise<AdminAuthUser> {
+  const client = assertSupabase()
+  const { data, error } = await client.auth.verifyOtp({ email, token, type: 'email' })
 
   if (error) {
     throw error
