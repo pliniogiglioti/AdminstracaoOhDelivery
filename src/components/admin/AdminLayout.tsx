@@ -42,28 +42,27 @@ export function AdminLayout() {
         )}
       >
         <div className="space-y-4">
-          <div className="panel-card flex items-center justify-between px-4 py-3 lg:hidden">
-            <div>
-              <p className="font-display text-base font-bold text-coral-500">ohdelivery</p>
-              <p className="text-xs text-ink-500">Admin interno</p>
+          <div>
+            <div className="panel-card flex items-center justify-between px-4 py-3 lg:hidden">
+              <div>
+                <p className="font-display text-base font-bold text-coral-500">ohdelivery</p>
+                <p className="text-xs text-ink-500">Admin interno</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-ink-50 text-ink-900"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-ink-50 text-ink-900"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-          </div>
 
-          <div className="panel-card hidden items-center justify-between px-5 py-4 lg:flex">
-            <div>
+            <div className="panel-card hidden items-center justify-between px-5 py-4 lg:flex">
               <p className="text-sm font-semibold text-ink-500">Painel administrativo</p>
-              <p className="font-display text-lg font-bold text-ink-900">AdminOhDelivery</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-semibold text-ink-900">{auth.user.name}</p>
-              <p className="text-xs text-ink-500">{auth.user.email}</p>
+              <div className="text-right">
+                <p className="text-sm font-semibold text-ink-900">{auth.user.name}</p>
+                <p className="text-xs text-ink-500">{auth.user.email}</p>
+              </div>
             </div>
           </div>
 

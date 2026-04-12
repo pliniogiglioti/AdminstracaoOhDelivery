@@ -41,8 +41,7 @@ export function EmptyState({ title, description }: { title: string; description:
 export function PageHeader({ title, description }: { title: string; description: string }) {
   return (
     <div>
-      <p className="text-sm font-bold uppercase tracking-[0.16em] text-coral-500">AdminOhDelivery</p>
-      <h1 className="mt-2 font-display text-2xl font-bold text-ink-900 sm:text-3xl">{title}</h1>
+      <h1 className="font-display text-2xl font-bold text-ink-900 sm:text-3xl">{title}</h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-500">{description}</p>
     </div>
   )

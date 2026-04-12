@@ -40,6 +40,7 @@ export function FinancialPage() {
   const [dateFrom, setDateFrom] = useState(presets[3].from)
   const [dateTo, setDateTo] = useState(presets[3].to)
   const [storeId, setStoreId] = useState('')
+  const [storeFilter, setStoreFilter] = useState('')
   const [status, setStatus] = useState('entregue')
   const [loading, setLoading] = useState(true)
   const [orders, setOrders] = useState<AdminOrder[]>([])
@@ -154,16 +155,22 @@ export function FinancialPage() {
           </label>
           <label>
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Loja</span>
-            <select
-              value={storeId}
-              onChange={(e) => setStoreId(e.target.value)}
+            <input
+              list="financial-stores"
+              value={stores.find((s) => s.id === storeId)?.name ?? storeFilter}
+              onChange={(e) => {
+                setStoreFilter(e.target.value)
+                const match = stores.find((s) => s.name === e.target.value)
+                setStoreId(match ? match.id : '')
+              }}
+              placeholder="Todas as lojas"
               className="mt-2 h-11 w-full rounded-2xl border border-ink-100 bg-white px-3 text-sm outline-none focus:border-coral-300"
-            >
-              <option value="">Todas as lojas</option>
+            />
+            <datalist id="financial-stores">
               {stores.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
+                <option key={s.id} value={s.name} />
               ))}
-            </select>
+            </datalist>
           </label>
           <label>
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Status</span>
