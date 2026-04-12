@@ -4,6 +4,7 @@ import {
   ChevronRight,
   ClipboardList,
   Headphones,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   ShieldCheck,
@@ -18,6 +19,7 @@ import { cn } from '@/lib/utils'
 import { AnimatedModal } from '@/components/admin/AnimatedModal'
 import { SidebarLabel } from '@/components/admin/AdminUi'
 import type { SidebarCounts } from '@/hooks/useSidebarCounts'
+import { getAllowedSections } from '@/lib/accessControl'
 import type { AdminAuthUser, AdminSection } from '@/types'
 
 const navItems: Array<{ id: AdminSection; label: string; icon: LucideIcon; to: string }> = [
@@ -29,6 +31,7 @@ const navItems: Array<{ id: AdminSection; label: string; icon: LucideIcon; to: s
   { id: 'pedidos', label: 'Pedidos', icon: ClipboardList, to: '/app/pedidos' },
   { id: 'financeiro', label: 'Financeiro', icon: Wallet, to: '/app/financeiro' },
   { id: 'suporte', label: 'Suporte', icon: Headphones, to: '/app/suporte' },
+  { id: 'access_control', label: 'Controle de Acesso', icon: KeyRound, to: '/app/controle-de-acesso' },
 ]
 
 function navBadgeCount(id: AdminSection, counts: SidebarCounts): number {
@@ -55,6 +58,8 @@ export function AdminSidebar({
   className?: string
 }) {
   const [signOutModalOpen, setSignOutModalOpen] = useState(false)
+  const allowedSections = getAllowedSections(user.profile.roles)
+  const visibleNavItems = navItems.filter((item) => allowedSections.has(item.id))
 
   return (
     <>
@@ -80,7 +85,7 @@ export function AdminSidebar({
         </div>
 
         <nav className={cn('hide-scrollbar sidebar-content flex-1 space-y-1 overflow-y-auto py-4', collapsed ? 'px-2' : 'px-3')}>
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon
             const badge = counts ? navBadgeCount(item.id, counts) : 0
 

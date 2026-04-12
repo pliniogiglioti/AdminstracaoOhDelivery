@@ -81,7 +81,7 @@ export async function getCurrentAdminUser(): Promise<AdminAuthUser | null> {
   if (!user?.email) return null
 
   const profile = await getProfile(user.id)
-  if (!profile?.roles.includes('admin')) {
+  if (!profile?.roles.some((r) => r === 'admin' || r.startsWith('admin_'))) {
     await supabase.auth.signOut()
     return null
   }
@@ -115,7 +115,7 @@ export async function verifyAdminOtp(email: string, token: string): Promise<Admi
   }
 
   const profile = await getProfile(user.id)
-  if (!profile?.roles.includes('admin')) {
+  if (!profile?.roles.some((r) => r === 'admin' || r.startsWith('admin_'))) {
     await client.auth.signOut()
     throw new Error('Acesso restrito a administradores.')
   }

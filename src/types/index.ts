@@ -1,4 +1,21 @@
-export type UserRole = 'customer' | 'store_owner' | 'delivery' | 'admin'
+export type UserRole =
+  | 'customer'
+  | 'store_owner'
+  | 'delivery'
+  | 'admin'
+  | 'admin_operacoes'
+  | 'admin_financeiro'
+  | 'admin_suporte'
+
+export type AdminRole = 'super_admin' | 'operacoes' | 'financeiro' | 'suporte'
+
+export interface AdminUser {
+  id: string
+  email: string
+  name: string | null
+  roles: UserRole[]
+  createdAt: string
+}
 export type RegistrationStatus = 'pendente' | 'aprovado' | 'rejeitado'
 
 export interface Profile {
@@ -108,4 +125,5 @@ export type AdminSection =
   | 'pedidos'
   | 'suporte'
   | 'financeiro'
+  | 'access_control'
 

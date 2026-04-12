@@ -1,9 +1,15 @@
 import { isSameUtcDate } from '@/lib/utils'
 import { isSupabaseConfigured, supabase } from '@/lib/supabase'
+import {
+  adminRoleToProfileRole,
+  ALL_ADMIN_PROFILE_ROLES,
+} from '@/lib/accessControl'
 import type {
   AdminOrder,
   AdminPartner,
+  AdminRole,
   AdminStore,
+  AdminUser,
   DashboardMetrics,
   RegistrationStatus,
   StoreCategory,
@@ -382,6 +388,90 @@ export async function fetchFinancialOrders(filters: {
   if (error) throw error
 
   return ((data ?? []) as OrderRow[]).map(mapOrder)
+}
+
+export async function fetchAdminUsers(): Promise<AdminUser[]> {
+  const { data, error } = await client()
+    .from('profiles')
+    .select('id,email,name,full_name,roles,created_at')
+    .overlaps('roles', ALL_ADMIN_PROFILE_ROLES)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+
+  return ((data ?? []) as ProfileRow[]).map((row) => ({
+    id: row.id,
+    email: row.email ?? '',
+    name: row.name ?? row.full_name ?? null,
+    roles: (row.roles ?? []) as AdminUser['roles'],
+    createdAt: row.created_at,
+  }))
+}
+
+export async function setAdminUserRole(userId: string, adminRole: AdminRole): Promise<void> {
+  const supabaseClient = client()
+  const { data, error: fetchError } = await supabaseClient
+    .from('profiles')
+    .select('roles')
+    .eq('id', userId)
+    .single()
+
+  if (fetchError) throw fetchError
+
+  const current: string[] = ((data as { roles: string[] | null }).roles ?? [])
+  const nonAdmin = current.filter((r) => !ALL_ADMIN_PROFILE_ROLES.includes(r))
+  const newRoles = [...nonAdmin, adminRoleToProfileRole(adminRole)]
+
+  const { error } = await supabaseClient
+    .from('profiles')
+    .update({ roles: newRoles })
+    .eq('id', userId)
+
+  if (error) throw error
+}
+
+export async function revokeAdminAccess(userId: string): Promise<void> {
+  const supabaseClient = client()
+  const { data, error: fetchError } = await supabaseClient
+    .from('profiles')
+    .select('roles')
+    .eq('id', userId)
+    .single()
+
+  if (fetchError) throw fetchError
+
+  const current: string[] = ((data as { roles: string[] | null }).roles ?? [])
+  const newRoles = current.filter((r) => !ALL_ADMIN_PROFILE_ROLES.includes(r))
+
+  const { error } = await supabaseClient
+    .from('profiles')
+    .update({ roles: newRoles })
+    .eq('id', userId)
+
+  if (error) throw error
+}
+
+export async function grantAdminByEmail(email: string, adminRole: AdminRole): Promise<void> {
+  const supabaseClient = client()
+  const { data, error: fetchError } = await supabaseClient
+    .from('profiles')
+    .select('id,roles')
+    .eq('email', email)
+    .maybeSingle()
+
+  if (fetchError) throw fetchError
+  if (!data) throw new Error('Nenhum usuario encontrado com este email.')
+
+  const row = data as { id: string; roles: string[] | null }
+  const nonAdmin = (row.roles ?? []).filter((r) => !ALL_ADMIN_PROFILE_ROLES.includes(r))
+  const newRoles = [...nonAdmin, adminRoleToProfileRole(adminRole)]
+
+  const { error } = await supabaseClient
+    .from('profiles')
+    .update({ roles: newRoles })
+    .eq('id', row.id)
+
+  if (error) throw error
 }
 
 export async function fetchSidebarCounts(): Promise<{ pendingApprovals: number; openSupport: number }> {

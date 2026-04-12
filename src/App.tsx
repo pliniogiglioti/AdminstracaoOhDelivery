@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AdminLayout } from '@/components/admin/AdminLayout'
+import { AccessControlPage } from '@/pages/app/AccessControlPage'
 import { ApprovalsPage } from '@/pages/app/ApprovalsPage'
 import { CategoriesPage } from '@/pages/app/CategoriesPage'
 import { DashboardPage } from '@/pages/app/DashboardPage'
@@ -24,6 +25,7 @@ export function App() {
           <Route path="pedidos" element={<OrdersPage />} />
           <Route path="financeiro" element={<FinancialPage />} />
           <Route path="suporte" element={<SupportPage />} />
+          <Route path="controle-de-acesso" element={<AccessControlPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
