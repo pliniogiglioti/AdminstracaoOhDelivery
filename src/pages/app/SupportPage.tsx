@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, MessageSquare } from 'lucide-react'
+import { CheckCircle2, Clock, Loader2, MessageSquare } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { AnimatedModal } from '@/components/admin/AnimatedModal'
@@ -6,13 +6,6 @@ import { EmptyState, PageHeader } from '@/components/admin/AdminUi'
 import { formatDateTime } from '@/lib/utils'
 import { fetchSupportTickets, updateSupportTicketStatus } from '@/services/admin'
 import type { SupportTicket, SupportTicketCategory, SupportTicketStatus } from '@/types'
-
-const STATUS_TABS: Array<{ value: SupportTicketStatus | 'todos'; label: string }> = [
-  { value: 'todos', label: 'Todos' },
-  { value: 'aberto', label: 'Abertos' },
-  { value: 'em_andamento', label: 'Em andamento' },
-  { value: 'resolvido', label: 'Resolvidos' },
-]
 
 const CATEGORY_LABELS: Record<SupportTicketCategory, string> = {
   financeiro: 'Financeiro',
@@ -34,17 +27,58 @@ const STATUS_LABELS: Record<SupportTicketStatus, string> = {
   resolvido: 'Resolvido',
 }
 
+type ActiveTab = SupportTicketStatus | 'todos'
+
+interface StatusCardConfig {
+  value: ActiveTab
+  label: string
+  activeColor: string
+  countColor: string
+  dotColor: string
+}
+
+const STATUS_CARDS: StatusCardConfig[] = [
+  {
+    value: 'todos',
+    label: 'Todos',
+    activeColor: 'border-ink-900 bg-ink-900',
+    countColor: 'text-ink-900',
+    dotColor: 'bg-ink-300',
+  },
+  {
+    value: 'aberto',
+    label: 'Abertos',
+    activeColor: 'border-coral-500 bg-coral-500',
+    countColor: 'text-coral-600',
+    dotColor: 'bg-coral-400',
+  },
+  {
+    value: 'em_andamento',
+    label: 'Em andamento',
+    activeColor: 'border-sand-500 bg-sand-500',
+    countColor: 'text-sand-700',
+    dotColor: 'bg-sand-400',
+  },
+  {
+    value: 'resolvido',
+    label: 'Resolvidos',
+    activeColor: 'border-mint-600 bg-mint-600',
+    countColor: 'text-mint-700',
+    dotColor: 'bg-mint-500',
+  },
+]
+
 export function SupportPage() {
   const [tickets, setTickets] = useState<SupportTicket[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<SupportTicketStatus | 'todos'>('todos')
+  const [activeTab, setActiveTab] = useState<ActiveTab>('aberto')
   const [selected, setSelected] = useState<SupportTicket | null>(null)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
-  async function loadTickets(status: SupportTicketStatus | 'todos') {
+  async function loadTickets() {
     setLoading(true)
     try {
-      setTickets(await fetchSupportTickets({ status }))
+      setTickets(await fetchSupportTickets())
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar os chamados.')
     } finally {
@@ -53,8 +87,8 @@ export function SupportPage() {
   }
 
   useEffect(() => {
-    void loadTickets(activeTab)
-  }, [activeTab])
+    void loadTickets()
+  }, [])
 
   async function handleStatusChange(ticket: SupportTicket, newStatus: SupportTicketStatus) {
     setUpdatingId(ticket.id)
@@ -74,6 +108,20 @@ export function SupportPage() {
     }
   }
 
+  const aberto = tickets.filter((t) => t.status === 'aberto').length
+  const emAndamento = tickets.filter((t) => t.status === 'em_andamento').length
+  const resolvido = tickets.filter((t) => t.status === 'resolvido').length
+
+  const counts: Record<ActiveTab, number> = {
+    todos: tickets.length,
+    aberto,
+    em_andamento: emAndamento,
+    resolvido,
+  }
+
+  const visibleTickets =
+    activeTab === 'todos' ? tickets : tickets.filter((t) => t.status === activeTab)
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -81,35 +129,58 @@ export function SupportPage() {
         description="Gerencie os chamados abertos pelos parceiros e acompanhe o atendimento."
       />
 
-      {/* Abas de status */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            onClick={() => setActiveTab(tab.value)}
-            className={[
-              'inline-flex h-9 shrink-0 items-center rounded-xl px-4 text-sm font-semibold transition',
-              activeTab === tab.value
-                ? 'bg-coral-500 text-white'
-                : 'bg-ink-50 text-ink-600 hover:bg-ink-100',
-            ].join(' ')}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Cards de status */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {STATUS_CARDS.map((card) => {
+          const isActive = activeTab === card.value
+          return (
+            <button
+              key={card.value}
+              type="button"
+              onClick={() => setActiveTab(card.value)}
+              className={[
+                'panel-card flex cursor-pointer flex-col gap-3 p-4 text-left transition hover:shadow-sm',
+                isActive ? `ring-2 ${card.activeColor.split(' ')[0]}` : '',
+              ].join(' ')}
+            >
+              <div className="flex items-center justify-between">
+                <span
+                  className={[
+                    'inline-flex h-2.5 w-2.5 rounded-full',
+                    isActive ? card.dotColor : 'bg-ink-200',
+                  ].join(' ')}
+                />
+                {loading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-ink-300" />
+                ) : null}
+              </div>
+              <div>
+                <p
+                  className={[
+                    'font-display text-2xl font-bold',
+                    isActive ? card.countColor : 'text-ink-900',
+                  ].join(' ')}
+                >
+                  {loading ? '—' : counts[card.value]}
+                </p>
+                <p className="mt-0.5 text-sm font-medium text-ink-500">{card.label}</p>
+              </div>
+            </button>
+          )
+        })}
       </div>
 
+      {/* Lista de chamados */}
       {loading ? (
         <div className="panel-card px-5 py-4 text-sm text-ink-500">Carregando chamados...</div>
-      ) : tickets.length === 0 ? (
+      ) : visibleTickets.length === 0 ? (
         <EmptyState
           title="Nenhum chamado encontrado"
           description="Quando parceiros abrirem chamados, eles apareceram aqui."
         />
       ) : (
         <div className="grid gap-3 xl:grid-cols-2">
-          {tickets.map((ticket) => (
+          {visibleTickets.map((ticket) => (
             <article
               key={ticket.id}
               className="panel-card cursor-pointer p-5 transition hover:shadow-md"
