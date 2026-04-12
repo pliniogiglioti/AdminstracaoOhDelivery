@@ -19,10 +19,10 @@ export function AdminLayout() {
   }
 
   return (
-    <div className="min-h-dvh px-3 py-3 sm:px-4 lg:px-4 lg:pt-0">
+    <div className="min-h-dvh px-3 py-3 sm:px-4 lg:p-4">
       <div
         className={cn(
-          'sidebar-shell hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:block lg:px-4 lg:pb-4 lg:pt-0',
+          'sidebar-shell hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:block lg:p-4',
           sidebarCollapsed ? 'lg:w-[108px]' : 'lg:w-[320px]'
         )}
       >
