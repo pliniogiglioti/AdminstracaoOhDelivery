@@ -303,7 +303,7 @@ export async function fetchStoreOptions(): Promise<StoreOption[]> {
 interface SupportTicketRow {
   id: string
   store_id: string
-  stores: { name: string } | null
+  stores: Array<{ name: string }> | null
   protocol: string
   title: string
   category: string
@@ -317,7 +317,7 @@ function mapSupportTicket(row: SupportTicketRow): SupportTicket {
   return {
     id: row.id,
     storeId: row.store_id,
-    storeName: row.stores?.name ?? null,
+    storeName: (Array.isArray(row.stores) ? row.stores[0]?.name : null) ?? null,
     protocol: row.protocol,
     title: row.title,
     category: row.category as SupportTicket['category'],
