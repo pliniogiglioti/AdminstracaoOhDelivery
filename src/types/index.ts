@@ -20,10 +20,8 @@ export interface AdminAuthUser {
 export interface AdminStore {
   id: string
   name: string
-  slug: string | null
   categoryId: string | null
   categoryName: string | null
-  tagline: string | null
   partnerEmail: string | null
   partnerName: string | null
   registrationStatus: RegistrationStatus

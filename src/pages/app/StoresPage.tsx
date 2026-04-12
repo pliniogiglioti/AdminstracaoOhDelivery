@@ -235,7 +235,6 @@ export function StoresPage() {
           <div className="space-y-4 text-sm">
             <div>
               <p className="font-display text-xl font-bold text-ink-900">{selectedStore.name}</p>
-              <p className="mt-1 text-ink-500">{selectedStore.tagline ?? 'Sem chamada cadastrada'}</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <p><span className="font-semibold text-ink-500">Categoria:</span> {selectedStore.categoryName ?? '-'}</p>

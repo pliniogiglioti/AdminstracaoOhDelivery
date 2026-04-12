@@ -16,10 +16,8 @@ import type {
 interface StoreRow {
   id: string
   name: string
-  slug: string | null
   category_id: string | null
   category_name: string | null
-  tagline: string | null
   partner_email: string | null
   partner_name: string | null
   registration_status: RegistrationStatus | null
@@ -81,10 +79,8 @@ function mapStore(row: StoreRow): AdminStore {
   return {
     id: row.id,
     name: row.name,
-    slug: row.slug,
     categoryId: row.category_id,
     categoryName: row.category_name,
-    tagline: row.tagline,
     partnerEmail: row.partner_email,
     partnerName: row.partner_name,
     registrationStatus: row.registration_status ?? 'pendente',
@@ -130,7 +126,7 @@ function mapOrder(row: OrderRow): AdminOrder {
 }
 
 const storeSelect = `
-  id,name,slug,category_id,category_name,tagline,partner_email,partner_name,
+  id,name,category_id,category_name,partner_email,partner_name,
   registration_status,rejection_reason,is_open,active,delivery_fee,eta_min,eta_max,
   address_street,address_neighborhood,address_city,address_state,address_zip,
   created_at,updated_at
