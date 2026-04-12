@@ -54,7 +54,7 @@ export function AdminSidebar({
           <div className={cn('flex items-center', collapsed ? 'justify-center' : 'gap-3')}>
             {!collapsed ? (
               <div className="min-w-0 flex-1 pl-3">
-                <img src="/logo.png" alt="ohdelivery" className="h-8 w-auto" />
+                <img src="/logo.png" alt="ohdelivery" className="w-[155px]" />
                 <p className="mt-1 text-sm text-ink-500">Admin interno</p>
               </div>
             ) : null}
