@@ -63,7 +63,7 @@ async function lookupEan(ean: string): Promise<FoodResult | null> {
 async function searchByName(query: string): Promise<FoodResult[]> {
   try {
     const res = await fetch(
-      `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=10&lc=pt`
+      `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(query)}&fields=code,product_name,product_name_pt,brands,image_url,generic_name,generic_name_pt&page_size=10`
     )
     if (!res.ok) return []
     const json = await res.json() as {
@@ -339,99 +339,98 @@ export function IndustrializedProductsPage() {
       </div>
 
       {/* Modal criar/editar */}
-      <AnimatedModal open={modalOpen} onClose={closeModal} title={editingId !== null ? 'Editar Produto' : 'Novo Produto'} className="max-w-xl">
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <AnimatedModal open={modalOpen} onClose={closeModal} title={editingId !== null ? 'Editar Produto' : 'Novo Produto'} className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="grid grid-cols-2 gap-6">
 
-          {/* Busca Open Food Facts */}
-          <div className="rounded-2xl border border-ink-100 bg-ink-50 p-4 space-y-3">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Buscar na base Open Food Facts</p>
+          {/* Coluna esquerda: busca */}
+          <div className="space-y-3">
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Buscar via Open Food Facts</p>
             <div className="flex gap-2">
               <input
                 value={lookupQuery}
                 onChange={(e) => setLookupQuery(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleLookup() } }}
-                className="h-10 flex-1 rounded-2xl border border-ink-100 bg-white px-3 text-sm outline-none focus:border-coral-300"
-                placeholder="EAN (7894900011517) ou nome (Coca-Cola)"
+                className="h-10 flex-1 rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
+                placeholder="EAN ou nome do produto"
               />
               <button type="button" onClick={() => void handleLookup()} disabled={lookingUp}
-                className="inline-flex h-10 items-center gap-2 rounded-2xl bg-ink-900 px-4 text-sm font-bold text-white hover:bg-ink-700 disabled:opacity-60">
+                className="inline-flex h-10 items-center gap-1 rounded-2xl bg-ink-900 px-3 text-sm font-bold text-white hover:bg-ink-700 disabled:opacity-60">
                 {lookingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                {lookingUp ? 'Buscando...' : 'Buscar'}
               </button>
             </div>
+            <p className="text-xs text-ink-400">Digite o EAN ou nome e clique no resultado para preencher o formulario.</p>
 
-            {/* Resultados */}
-            {lookupResults.length > 0 && (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {lookupResults.map((r) => (
-                  <button key={r.code} type="button" onClick={() => applyResult(r)}
-                    className="flex w-full items-center gap-3 rounded-2xl border border-ink-100 bg-white p-2 text-left hover:border-coral-300 hover:bg-coral-50">
-                    {r.imageUrl
-                      ? <img src={r.imageUrl} alt={r.name} className="h-10 w-10 shrink-0 rounded-xl object-cover" />
-                      : <div className="h-10 w-10 shrink-0 rounded-xl bg-ink-100" />}
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-ink-900">{r.name}</p>
-                      <p className="truncate text-xs text-ink-500">{r.brand} {r.code ? `· ${r.code}` : ''}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="space-y-2 max-h-[420px] overflow-y-auto">
+              {lookupResults.length === 0 && !lookingUp && (
+                <p className="py-8 text-center text-sm text-ink-400">Nenhum resultado ainda.</p>
+              )}
+              {lookupResults.map((r) => (
+                <button key={r.code} type="button" onClick={() => applyResult(r)}
+                  className="flex w-full items-center gap-3 rounded-2xl border border-ink-100 p-2 text-left hover:border-coral-300 hover:bg-coral-50">
+                  {r.imageUrl
+                    ? <img src={r.imageUrl} alt={r.name} className="h-12 w-12 shrink-0 rounded-xl object-cover" />
+                    : <div className="h-12 w-12 shrink-0 rounded-xl bg-ink-100" />}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-ink-900">{r.name}</p>
+                    <p className="truncate text-xs text-ink-500">{r.brand}</p>
+                    <p className="truncate text-xs font-mono text-ink-400">{r.code}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
 
-          <label className="block">
-            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">EAN</span>
-            <input value={form.ean} onChange={(e) => setForm((f) => ({ ...f, ean: e.target.value }))}
-              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-              placeholder="7894900011517" />
-          </label>
+          {/* Coluna direita: formulário */}
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">EAN</span>
+              <input value={form.ean} onChange={(e) => setForm((f) => ({ ...f, ean: e.target.value }))}
+                className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
+                placeholder="7894900011517" />
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Nome *</span>
+              <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required
+                className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
+                placeholder="Coca-Cola Lata 350ml" />
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Marca</span>
+              <input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))}
+                className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
+                placeholder="Coca-Cola" />
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Descricao</span>
+              <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2}
+                className="mt-1 w-full rounded-2xl border border-ink-100 px-3 py-2 text-sm outline-none focus:border-coral-300" />
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">URL da Imagem</span>
+              <input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
+                className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
+                placeholder="https://..." />
+              {form.imageUrl ? <img src={form.imageUrl} alt="preview" className="mt-2 h-16 w-16 rounded-xl object-cover" /> : null}
+            </label>
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Ativo</span>
+              <select value={form.active ? 'true' : 'false'} onChange={(e) => setForm((f) => ({ ...f, active: e.target.value === 'true' }))}
+                className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300">
+                <option value="true">Sim</option>
+                <option value="false">Nao</option>
+              </select>
+            </label>
+            <div className="flex justify-end gap-3 pt-1">
+              <button type="button" onClick={closeModal}
+                className="h-11 rounded-2xl border border-ink-100 px-5 text-sm font-semibold text-ink-700 hover:bg-ink-50">Cancelar</button>
+              <button type="submit" disabled={saving}
+                className="h-11 rounded-2xl bg-coral-500 px-5 text-sm font-bold text-white hover:bg-coral-600 disabled:opacity-60">
+                {saving ? 'Salvando...' : editingId !== null ? 'Salvar' : 'Cadastrar'}
+              </button>
+            </div>
+          </form>
 
-          <label className="block">
-            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Nome *</span>
-            <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required
-              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-              placeholder="Coca-Cola Lata 350ml" />
-          </label>
-
-          <label className="block">
-            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Marca</span>
-            <input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))}
-              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-              placeholder="Coca-Cola" />
-          </label>
-
-          <label className="block">
-            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Descricao</span>
-            <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2}
-              className="mt-2 w-full rounded-2xl border border-ink-100 px-3 py-2 text-sm outline-none focus:border-coral-300" />
-          </label>
-
-          <label className="block">
-            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">URL da Imagem</span>
-            <input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
-              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-              placeholder="https://..." />
-            {form.imageUrl ? <img src={form.imageUrl} alt="preview" className="mt-2 h-20 w-20 rounded-xl object-cover" /> : null}
-          </label>
-
-          <label className="block">
-            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Ativo</span>
-            <select value={form.active ? 'true' : 'false'} onChange={(e) => setForm((f) => ({ ...f, active: e.target.value === 'true' }))}
-              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300">
-              <option value="true">Sim</option>
-              <option value="false">Nao</option>
-            </select>
-          </label>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={closeModal}
-              className="h-11 rounded-2xl border border-ink-100 px-5 text-sm font-semibold text-ink-700 hover:bg-ink-50">Cancelar</button>
-            <button type="submit" disabled={saving}
-              className="h-11 rounded-2xl bg-coral-500 px-5 text-sm font-bold text-white hover:bg-coral-600 disabled:opacity-60">
-              {saving ? 'Salvando...' : editingId !== null ? 'Salvar' : 'Cadastrar'}
-            </button>
-          </div>
-        </form>
+        </div>
       </AnimatedModal>
 
       {/* Modal delete */}
