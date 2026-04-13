@@ -12,13 +12,7 @@ serve(async (req) => {
 
   const url = new URL(req.url)
   const ean = url.searchParams.get('ean') ?? ''
-
-  if (!ean) {
-    return new Response(JSON.stringify({ error: 'EAN obrigatorio' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  }
+  const query = url.searchParams.get('q') ?? ''
 
   const token = Deno.env.get('COSMOS_TOKEN')
   if (!token) {
@@ -28,44 +22,76 @@ serve(async (req) => {
     })
   }
 
+  const headers = {
+    'X-Cosmos-Token': token,
+    'Content-Type': 'application/json',
+    'User-Agent': 'ohdelivery-admin/1.0',
+  }
+
   try {
-    const res = await fetch(`https://api.cosmos.bluesoft.com.br/gtins/${ean}`, {
-      headers: {
-        'X-Cosmos-Token': token,
-        'Content-Type': 'application/json',
-        'User-Agent': 'ohdelivery-admin/1.0',
-      },
-    })
+    // Busca por EAN
+    if (ean) {
+      const res = await fetch(`https://api.cosmos.bluesoft.com.br/gtins/${ean}`, { headers })
 
-    if (res.status === 404) {
-      return new Response(JSON.stringify({ product: null }), {
+      if (res.status === 404) {
+        return new Response(JSON.stringify({ products: [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      if (!res.ok) {
+        return new Response(JSON.stringify({ error: `Cosmos ${res.status}`, products: [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const data = await res.json()
+      return new Response(JSON.stringify({
+        products: [{
+          code: ean,
+          name: data.description ?? '',
+          brand: data.brand?.name ?? '',
+          description: data.description ?? '',
+          imageUrl: data.thumbnail ?? data.picture ?? '',
+        }]
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // Busca por texto
+    if (query) {
+      const res = await fetch(
+        `https://api.cosmos.bluesoft.com.br/products?query=${encodeURIComponent(query)}`,
+        { headers }
+      )
+
+      if (!res.ok) {
+        return new Response(JSON.stringify({ error: `Cosmos ${res.status}`, products: [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const data = await res.json()
+      // Cosmos retorna array de produtos
+      const list = Array.isArray(data) ? data : (data.products ?? [])
+      const products = list.map((p: Record<string, unknown>) => ({
+        code: String(p.gtin ?? p.ean ?? ''),
+        name: String(p.description ?? ''),
+        brand: String((p.brand as Record<string, unknown>)?.name ?? ''),
+        description: String(p.description ?? ''),
+        imageUrl: String(p.thumbnail ?? p.picture ?? ''),
+      })).filter((p: { name: string }) => p.name)
+
+      return new Response(JSON.stringify({ products }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    if (!res.ok) {
-      return new Response(JSON.stringify({ error: `Cosmos retornou ${res.status}` }), {
-        status: res.status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    const data = await res.json()
-
-    // Cosmos retorna: description, brand { name }, thumbnail, avg_price
-    const product = {
-      code: ean,
-      name: data.description ?? '',
-      brand: data.brand?.name ?? '',
-      description: data.description ?? '',
-      imageUrl: data.thumbnail ?? data.picture ?? '',
-    }
-
-    return new Response(JSON.stringify({ product }), {
+    return new Response(JSON.stringify({ error: 'Informe ean ou q', products: [] }), {
+      status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
+
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
+    return new Response(JSON.stringify({ error: String(err), products: [] }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

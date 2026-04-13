@@ -30,20 +30,17 @@ interface FoodResult {
   imageUrl: string
 }
 
-async function lookupEan(ean: string): Promise<FoodResult | null> {
-  try {
-    const base = import.meta.env.VITE_SUPABASE_URL as string
-    const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-    const res = await fetch(
-      `${base}/functions/v1/search-products?ean=${encodeURIComponent(ean)}`,
-      { headers: { apikey: key, Authorization: `Bearer ${key}` } }
-    )
-    if (!res.ok) return null
-    const json = await res.json() as { product?: FoodResult }
-    return json.product ?? null
-  } catch {
-    return null
-  }
+async function searchCosmos(query: string): Promise<FoodResult[]> {
+  const base = import.meta.env.VITE_SUPABASE_URL as string
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+  const param = /^\d+$/.test(query.trim()) ? `ean=${encodeURIComponent(query.trim())}` : `q=${encodeURIComponent(query.trim())}`
+  const res = await fetch(`${base}/functions/v1/search-products?${param}`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  })
+  if (!res.ok) throw new Error(`Erro ${res.status}`)
+  const json = await res.json() as { products?: FoodResult[]; error?: string }
+  if (json.error) throw new Error(json.error)
+  return json.products ?? []
 }
 
 export function IndustrializedProductsPage() {
@@ -58,6 +55,7 @@ export function IndustrializedProductsPage() {
   const [lookingUp, setLookingUp] = useState(false)
   const [lookupQuery, setLookupQuery] = useState('')
   const [lookupResults, setLookupResults] = useState<FoodResult[]>([])
+  const [registering, setRegistering] = useState<string | null>(null) // code do produto sendo cadastrado
   const [search, setSearch] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<IndustrializedProduct | null>(null)
 
@@ -88,6 +86,7 @@ export function IndustrializedProductsPage() {
     setForm(emptyForm)
     setLookupQuery('')
     setLookupResults([])
+    setRegistering(null)
     setModalOpen(true)
   }
 
@@ -103,6 +102,7 @@ export function IndustrializedProductsPage() {
     })
     setLookupQuery('')
     setLookupResults([])
+    setRegistering(null)
     setModalOpen(true)
   }
 
@@ -112,6 +112,7 @@ export function IndustrializedProductsPage() {
     setForm(emptyForm)
     setLookupQuery('')
     setLookupResults([])
+    setRegistering(null)
   }
 
   function applyResult(r: FoodResult) {
@@ -129,16 +130,37 @@ export function IndustrializedProductsPage() {
 
   async function handleLookup() {
     const q = lookupQuery.trim()
-    if (!q) { toast.error('Digite um EAN para buscar.'); return }
-    if (!/^\d+$/.test(q)) { toast.error('A Cosmos busca apenas por EAN (somente numeros).'); return }
+    if (!q) { toast.error('Digite um EAN ou nome para buscar.'); return }
     setLookingUp(true)
     try {
-      const result = await lookupEan(q)
-      if (!result) { toast.error('Produto nao encontrado na base Cosmos.'); return }
-      applyResult(result)
-      toast.success('Dados preenchidos automaticamente.')
+      const results = await searchCosmos(q)
+      if (results.length === 0) { toast.error('Nenhum produto encontrado.'); return }
+      setLookupResults(results)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro na busca.')
     } finally {
       setLookingUp(false)
+    }
+  }
+
+  async function registerFromResult(r: FoodResult) {
+    setRegistering(r.code)
+    try {
+      await createIndustrializedProduct({
+        name: r.name,
+        brand: r.brand,
+        description: r.description,
+        ean: r.code,
+        imageUrl: r.imageUrl || null,
+        active: true,
+      })
+      toast.success(`"${r.name}" cadastrado!`)
+      await load(search || undefined, page)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : ''
+      toast.error(msg.includes('duplicate') || msg.includes('unique') ? 'EAN ja cadastrado.' : msg || 'Erro ao cadastrar.')
+    } finally {
+      setRegistering(null)
     }
   }
 
@@ -292,38 +314,45 @@ export function IndustrializedProductsPage() {
 
           {/* Coluna esquerda: busca */}
           <div className="space-y-3">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Buscar por EAN (Cosmos)</p>
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Buscar via Cosmos (EAN ou nome)</p>
             <div className="flex gap-2">
               <input
                 value={lookupQuery}
                 onChange={(e) => setLookupQuery(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleLookup() } }}
                 className="h-10 flex-1 rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-                placeholder="7894900011517"
+                placeholder="Coca-Cola ou 7894900011517"
               />
               <button type="button" onClick={() => void handleLookup()} disabled={lookingUp}
                 className="inline-flex h-10 items-center gap-1 rounded-2xl bg-ink-900 px-3 text-sm font-bold text-white hover:bg-ink-700 disabled:opacity-60">
                 {lookingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               </button>
             </div>
-            <p className="text-xs text-ink-400">Digite o codigo de barras EAN e clique em buscar. Os dados serao preenchidos automaticamente via Cosmos.</p>
+            <p className="text-xs text-ink-400">Clique em Cadastrar em cada produto para adicionar sem fechar o modal.</p>
 
-            <div className="space-y-2 max-h-[420px] overflow-y-auto">
+            <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
               {lookupResults.length === 0 && !lookingUp && (
-                <p className="py-8 text-center text-sm text-ink-400">Digite um EAN e clique buscar.</p>
+                <p className="py-8 text-center text-sm text-ink-400">Busque um produto para ver os resultados.</p>
               )}
               {lookupResults.map((r) => (
-                <button key={r.code} type="button" onClick={() => applyResult(r)}
-                  className="flex w-full items-center gap-3 rounded-2xl border border-ink-100 p-2 text-left hover:border-coral-300 hover:bg-coral-50">
+                <div key={r.code} className="flex items-center gap-3 rounded-2xl border border-ink-100 p-2">
                   {r.imageUrl
                     ? <img src={r.imageUrl} alt={r.name} className="h-12 w-12 shrink-0 rounded-xl object-cover" />
                     : <div className="h-12 w-12 shrink-0 rounded-xl bg-ink-100" />}
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold text-ink-900">{r.name}</p>
                     <p className="truncate text-xs text-ink-500">{r.brand}</p>
                     <p className="truncate text-xs font-mono text-ink-400">{r.code}</p>
                   </div>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => void registerFromResult(r)}
+                    disabled={registering === r.code}
+                    className="shrink-0 rounded-2xl bg-coral-500 px-3 py-2 text-xs font-bold text-white hover:bg-coral-600 disabled:opacity-60"
+                  >
+                    {registering === r.code ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Cadastrar'}
+                  </button>
+                </div>
               ))}
             </div>
           </div>
