@@ -28,6 +28,7 @@ export function IndustrializedProductsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState<IndustrializedProduct | null>(null)
 
   async function load(q?: string) {
     setLoading(true)
@@ -112,10 +113,10 @@ export function IndustrializedProductsPage() {
   }
 
   async function handleDelete(p: IndustrializedProduct) {
-    if (!window.confirm(`Remover "${p.name}"?`)) return
     try {
       await deleteIndustrializedProduct(p.id)
       setProducts((cur) => cur.filter((x) => x.id !== p.id))
+      setConfirmDelete(null)
       toast.success('Produto removido.')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao remover.')
@@ -198,7 +199,7 @@ export function IndustrializedProductsPage() {
                         className="rounded-2xl border border-ink-100 px-3 py-2 text-xs font-bold text-ink-700 hover:bg-ink-50">
                         Editar
                       </button>
-                      <button type="button" onClick={() => void handleDelete(p)}
+                      <button type="button" onClick={() => setConfirmDelete(p)}
                         className="rounded-2xl bg-coral-50 px-3 py-2 text-xs font-bold text-coral-700 hover:bg-coral-100">
                         Remover
                       </button>
@@ -293,6 +294,26 @@ export function IndustrializedProductsPage() {
             </button>
           </div>
         </form>
+      </AnimatedModal>
+      {/* Modal confirmação delete */}
+      <AnimatedModal
+        open={confirmDelete !== null}
+        onClose={() => setConfirmDelete(null)}
+        title="Remover produto"
+      >
+        <p className="text-sm text-ink-500">
+          Tem certeza que deseja remover <span className="font-bold text-ink-900">{confirmDelete?.name}</span>?
+        </p>
+        <div className="mt-6 flex justify-end gap-3">
+          <button type="button" onClick={() => setConfirmDelete(null)}
+            className="h-11 rounded-2xl border border-ink-100 px-5 text-sm font-semibold text-ink-700 hover:bg-ink-50">
+            Cancelar
+          </button>
+          <button type="button" onClick={() => confirmDelete && void handleDelete(confirmDelete)}
+            className="h-11 rounded-2xl bg-coral-500 px-5 text-sm font-bold text-white hover:bg-coral-600">
+            Remover
+          </button>
+        </div>
       </AnimatedModal>
     </div>
   )
