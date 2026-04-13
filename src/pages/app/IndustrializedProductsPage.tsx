@@ -339,7 +339,7 @@ export function IndustrializedProductsPage() {
       </div>
 
       {/* Modal criar/editar */}
-      <AnimatedModal open={modalOpen} onClose={closeModal} title={editingId !== null ? 'Editar Produto' : 'Novo Produto'} className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <AnimatedModal open={modalOpen} onClose={closeModal} title={editingId !== null ? 'Editar Produto' : 'Novo Produto'} className="!max-w-5xl w-[90vw] max-h-[90vh] overflow-y-auto">
         <div className="grid grid-cols-2 gap-6">
 
           {/* Coluna esquerda: busca */}
