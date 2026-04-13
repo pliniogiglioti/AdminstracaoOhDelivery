@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/admin/AdminUi'
 import { AnimatedModal } from '@/components/admin/AnimatedModal'
 import {
@@ -10,6 +10,8 @@ import {
   updateIndustrializedProduct,
 } from '@/services/admin'
 import type { IndustrializedProduct } from '@/types'
+
+const PAGE_SIZE = 10
 
 const emptyForm = {
   name: '',
@@ -22,6 +24,8 @@ const emptyForm = {
 
 export function IndustrializedProductsPage() {
   const [products, setProducts] = useState<IndustrializedProduct[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(0)
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -30,10 +34,14 @@ export function IndustrializedProductsPage() {
   const [search, setSearch] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<IndustrializedProduct | null>(null)
 
-  async function load(q?: string) {
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+
+  async function load(q?: string, p = 0) {
     setLoading(true)
     try {
-      setProducts(await fetchIndustrializedProducts(q))
+      const result = await fetchIndustrializedProducts(q, p, PAGE_SIZE)
+      setProducts(result.data)
+      setTotal(result.count)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar produtos.')
     } finally {
@@ -42,6 +50,11 @@ export function IndustrializedProductsPage() {
   }
 
   useEffect(() => { void load() }, [])
+
+  function goToPage(p: number) {
+    setPage(p)
+    void load(search || undefined, p)
+  }
 
   function openCreate() {
     setEditingId(null)
@@ -94,7 +107,7 @@ export function IndustrializedProductsPage() {
         toast.success('Produto criado.')
       }
       closeModal()
-      await load(search || undefined)
+      await load(search || undefined, page)
     } catch (error) {
       const msg = error instanceof Error ? error.message : ''
       if (msg.includes('409') || msg.includes('duplicate') || msg.includes('unique')) {
@@ -120,9 +133,9 @@ export function IndustrializedProductsPage() {
   async function handleDelete(p: IndustrializedProduct) {
     try {
       await deleteIndustrializedProduct(p.id)
-      setProducts((cur) => cur.filter((x) => x.id !== p.id))
       setConfirmDelete(null)
       toast.success('Produto removido.')
+      await load(search || undefined, page)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao remover.')
     }
@@ -132,27 +145,21 @@ export function IndustrializedProductsPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <PageHeader title="Produtos Industrializados" description="Catalogo de produtos industrializados com EAN." />
-        <button
-          type="button"
-          onClick={openCreate}
-          className="inline-flex h-11 items-center gap-2 rounded-2xl bg-coral-500 px-5 text-sm font-bold text-white hover:bg-coral-600"
-        >
+        <button type="button" onClick={openCreate}
+          className="inline-flex h-11 items-center gap-2 rounded-2xl bg-coral-500 px-5 text-sm font-bold text-white hover:bg-coral-600">
           <Plus className="h-4 w-4" />
           Novo Produto
         </button>
       </div>
 
       {/* Busca */}
-      <form onSubmit={(e) => { e.preventDefault(); void load(search || undefined) }} className="flex gap-2">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+      <form onSubmit={(e) => { e.preventDefault(); setPage(0); void load(search || undefined, 0) }} className="flex gap-2">
+        <input value={search} onChange={(e) => setSearch(e.target.value)}
           className="h-11 flex-1 rounded-2xl border border-ink-100 px-4 text-sm outline-none focus:border-coral-300"
-          placeholder="Buscar por nome, marca ou EAN..."
-        />
+          placeholder="Buscar por nome, marca ou EAN..." />
         <button type="submit" className="h-11 rounded-2xl bg-ink-900 px-5 text-sm font-bold text-white hover:bg-ink-700">Buscar</button>
         {search ? (
-          <button type="button" onClick={() => { setSearch(''); void load() }}
+          <button type="button" onClick={() => { setSearch(''); setPage(0); void load(undefined, 0) }}
             className="h-11 rounded-2xl border border-ink-100 px-4 text-sm font-bold text-ink-700 hover:bg-ink-50">
             Limpar
           </button>
@@ -181,11 +188,9 @@ export function IndustrializedProductsPage() {
               ) : products.map((p) => (
                 <tr key={p.id}>
                   <td className="px-4 py-4">
-                    {p.imageUrl ? (
-                      <img src={p.imageUrl} alt={p.name} className="h-12 w-12 rounded-xl object-cover" />
-                    ) : (
-                      <div className="h-12 w-12 rounded-xl bg-ink-100" />
-                    )}
+                    {p.imageUrl
+                      ? <img src={p.imageUrl} alt={p.name} className="h-12 w-12 rounded-xl object-cover" />
+                      : <div className="h-12 w-12 rounded-xl bg-ink-100" />}
                   </td>
                   <td className="px-4 py-4 font-bold text-ink-900">{p.name}</td>
                   <td className="px-4 py-4 text-ink-600">{p.brand ?? '—'}</td>
@@ -215,75 +220,75 @@ export function IndustrializedProductsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Paginação */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-ink-100 px-4 py-3">
+            <p className="text-sm text-ink-500">
+              {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} de {total} produtos
+            </p>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={() => goToPage(page - 1)} disabled={page === 0}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-ink-100 text-ink-700 hover:bg-ink-50 disabled:opacity-40">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i).map((i) => (
+                <button key={i} type="button" onClick={() => goToPage(i)}
+                  className={i === page
+                    ? 'inline-flex h-9 w-9 items-center justify-center rounded-xl bg-coral-500 text-sm font-bold text-white'
+                    : 'inline-flex h-9 w-9 items-center justify-center rounded-xl border border-ink-100 text-sm text-ink-700 hover:bg-ink-50'}>
+                  {i + 1}
+                </button>
+              ))}
+              <button type="button" onClick={() => goToPage(page + 1)} disabled={page >= totalPages - 1}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-ink-100 text-ink-700 hover:bg-ink-50 disabled:opacity-40">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Modal */}
-      <AnimatedModal
-        open={modalOpen}
-        onClose={closeModal}
-        title={editingId !== null ? 'Editar Produto' : 'Novo Produto'}
-        className="max-w-xl"
-      >
+      {/* Modal criar/editar */}
+      <AnimatedModal open={modalOpen} onClose={closeModal} title={editingId !== null ? 'Editar Produto' : 'Novo Produto'} className="max-w-xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Nome *</span>
-            <input
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              required
+            <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required
               className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-              placeholder="Coca-Cola Lata 350ml"
-            />
+              placeholder="Coca-Cola Lata 350ml" />
           </label>
           <div className="grid grid-cols-2 gap-4">
             <label className="block">
               <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Marca</span>
-              <input
-                value={form.brand}
-                onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))}
+              <input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))}
                 className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-                placeholder="Coca-Cola"
-              />
+                placeholder="Coca-Cola" />
             </label>
             <label className="block">
               <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">EAN</span>
-              <input
-                value={form.ean}
-                onChange={(e) => setForm((f) => ({ ...f, ean: e.target.value }))}
+              <input value={form.ean} onChange={(e) => setForm((f) => ({ ...f, ean: e.target.value }))}
                 className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-                placeholder="7894900011517"
-              />
+                placeholder="7894900011517" />
             </label>
           </div>
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Descricao</span>
-            <textarea
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              rows={2}
+            <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2}
               className="mt-2 w-full rounded-2xl border border-ink-100 px-3 py-2 text-sm outline-none focus:border-coral-300"
-              placeholder="Descricao do produto..."
-            />
+              placeholder="Descricao do produto..." />
           </label>
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">URL da Imagem</span>
-            <input
-              value={form.imageUrl}
-              onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
+            <input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
               className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-              placeholder="https://..."
-            />
-            {form.imageUrl ? (
-              <img src={form.imageUrl} alt="preview" className="mt-2 h-20 w-20 rounded-xl object-cover" />
-            ) : null}
+              placeholder="https://..." />
+            {form.imageUrl ? <img src={form.imageUrl} alt="preview" className="mt-2 h-20 w-20 rounded-xl object-cover" /> : null}
           </label>
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Ativo</span>
-            <select
-              value={form.active ? 'true' : 'false'}
-              onChange={(e) => setForm((f) => ({ ...f, active: e.target.value === 'true' }))}
-              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-            >
+            <select value={form.active ? 'true' : 'false'} onChange={(e) => setForm((f) => ({ ...f, active: e.target.value === 'true' }))}
+              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300">
               <option value="true">Sim</option>
               <option value="false">Nao</option>
             </select>
@@ -300,12 +305,9 @@ export function IndustrializedProductsPage() {
           </div>
         </form>
       </AnimatedModal>
+
       {/* Modal confirmação delete */}
-      <AnimatedModal
-        open={confirmDelete !== null}
-        onClose={() => setConfirmDelete(null)}
-        title="Remover produto"
-      >
+      <AnimatedModal open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title="Remover produto">
         <p className="text-sm text-ink-500">
           Tem certeza que deseja remover <span className="font-bold text-ink-900">{confirmDelete?.name}</span>?
         </p>

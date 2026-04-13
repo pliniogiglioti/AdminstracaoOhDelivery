@@ -667,20 +667,23 @@ function mapIndustrializedProduct(row: IndustrializedProductRow): Industrialized
   }
 }
 
-export async function fetchIndustrializedProducts(search?: string): Promise<IndustrializedProduct[]> {
+export async function fetchIndustrializedProducts(search?: string, page = 0, pageSize = 10): Promise<{ data: IndustrializedProduct[]; count: number }> {
   let query = client()
     .from('industrializados')
-    .select('id,name,brand,description,ean,image_url,active,created_at')
+    .select('id,name,brand,description,ean,image_url,active,created_at', { count: 'exact' })
     .order('name', { ascending: true })
-    .limit(500)
+    .range(page * pageSize, page * pageSize + pageSize - 1)
 
   if (search) {
     query = query.or(`name.ilike.%${search}%,ean.ilike.%${search}%,brand.ilike.%${search}%`)
   }
 
-  const { data, error } = await query
+  const { data, error, count } = await query
   if (error) throw error
-  return ((data ?? []) as IndustrializedProductRow[]).map(mapIndustrializedProduct)
+  return {
+    data: ((data ?? []) as IndustrializedProductRow[]).map(mapIndustrializedProduct),
+    count: count ?? 0,
+  }
 }
 
 export async function createIndustrializedProduct(input: {
