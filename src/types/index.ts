@@ -121,16 +121,12 @@ export type ProductType = 'preparado' | 'industrializado'
 export interface IndustrializedProduct {
   id: string
   name: string
+  brand: string | null
   description: string | null
   ean: string | null
-  price: number
-  compareAtPrice: number | null
   imageUrl: string | null
   active: boolean
-  featured: boolean
-  sortOrder: number
   createdAt: string
-  updatedAt: string
 }
 
 export type AdminSection =

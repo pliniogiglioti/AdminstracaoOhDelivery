@@ -644,47 +644,38 @@ export async function deleteStoreBanner(id: string): Promise<void> {
 // ─── Produtos Industrializados ────────────────────────────────────────────────
 
 interface IndustrializedProductRow {
-  id: string
+  id: number
   name: string
+  brand: string | null
   description: string | null
   ean: string | null
-  price: number
-  compare_at_price: number | null
   image_url: string | null
   active: boolean
-  featured: boolean
-  sort_order: number
   created_at: string
-  updated_at: string
 }
 
 function mapIndustrializedProduct(row: IndustrializedProductRow): IndustrializedProduct {
   return {
-    id: row.id,
+    id: String(row.id),
     name: row.name,
+    brand: row.brand,
     description: row.description,
     ean: row.ean,
-    price: row.price,
-    compareAtPrice: row.compare_at_price,
     imageUrl: row.image_url,
     active: row.active,
-    featured: row.featured,
-    sortOrder: row.sort_order,
     createdAt: row.created_at,
-    updatedAt: row.updated_at,
   }
 }
 
 export async function fetchIndustrializedProducts(search?: string): Promise<IndustrializedProduct[]> {
   let query = client()
-    .from('products')
-    .select('id,name,description,ean,price,compare_at_price,image_url,active,featured,sort_order,created_at,updated_at')
-    .eq('product_type', 'industrializado')
-    .order('sort_order', { ascending: true })
+    .from('industrializados')
+    .select('id,name,brand,description,ean,image_url,active,created_at')
+    .order('name', { ascending: true })
     .limit(500)
 
   if (search) {
-    query = query.or(`name.ilike.%${search}%,ean.ilike.%${search}%`)
+    query = query.or(`name.ilike.%${search}%,ean.ilike.%${search}%,brand.ilike.%${search}%`)
   }
 
   const { data, error } = await query
@@ -694,25 +685,19 @@ export async function fetchIndustrializedProducts(search?: string): Promise<Indu
 
 export async function createIndustrializedProduct(input: {
   name: string
+  brand: string
   description: string
   ean: string
-  price: number
-  compareAtPrice: number | null
+  imageUrl: string | null
   active: boolean
-  featured: boolean
-  sortOrder: number
 }): Promise<void> {
-  const { error } = await client().from('products').insert({
+  const { error } = await client().from('industrializados').insert({
     name: input.name,
+    brand: input.brand || null,
     description: input.description || null,
     ean: input.ean || null,
-    price: input.price,
-    compare_at_price: input.compareAtPrice,
+    image_url: input.imageUrl || null,
     active: input.active,
-    featured: input.featured,
-    sort_order: input.sortOrder,
-    product_type: 'industrializado',
-    store_id: '00000000-0000-0000-0000-000000000000', // placeholder — produtos globais
   })
   if (error) throw error
 }
@@ -721,30 +706,26 @@ export async function updateIndustrializedProduct(
   id: string,
   input: Partial<{
     name: string
+    brand: string
     description: string
     ean: string
-    price: number
-    compareAtPrice: number | null
+    imageUrl: string | null
     active: boolean
-    featured: boolean
-    sortOrder: number
   }>
 ): Promise<void> {
-  const payload: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  const payload: Record<string, unknown> = {}
   if (input.name !== undefined) payload.name = input.name
+  if (input.brand !== undefined) payload.brand = input.brand || null
   if (input.description !== undefined) payload.description = input.description || null
   if (input.ean !== undefined) payload.ean = input.ean || null
-  if (input.price !== undefined) payload.price = input.price
-  if ('compareAtPrice' in input) payload.compare_at_price = input.compareAtPrice
+  if ('imageUrl' in input) payload.image_url = input.imageUrl || null
   if (input.active !== undefined) payload.active = input.active
-  if (input.featured !== undefined) payload.featured = input.featured
-  if (input.sortOrder !== undefined) payload.sort_order = input.sortOrder
 
-  const { error } = await client().from('products').update(payload).eq('id', id)
+  const { error } = await client().from('industrializados').update(payload).eq('id', id)
   if (error) throw error
 }
 
 export async function deleteIndustrializedProduct(id: string): Promise<void> {
-  const { error } = await client().from('products').delete().eq('id', id)
+  const { error } = await client().from('industrializados').delete().eq('id', id)
   if (error) throw error
 }
