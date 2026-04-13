@@ -32,30 +32,15 @@ interface FoodResult {
 
 async function searchByName(query: string): Promise<FoodResult[]> {
   try {
+    const base = import.meta.env.VITE_SUPABASE_URL as string
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string
     const res = await fetch(
-      `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(query)}&fields=code,product_name,product_name_pt,brands,image_url,generic_name,generic_name_pt&page_size=20&countries_tags=en:brazil`
+      `${base}/functions/v1/search-products?q=${encodeURIComponent(query)}`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` } }
     )
     if (!res.ok) return []
-    const json = await res.json() as {
-      products?: Array<{
-        code?: string
-        product_name?: string
-        product_name_pt?: string
-        brands?: string
-        image_url?: string
-        generic_name?: string
-        generic_name_pt?: string
-      }>
-    }
-    return (json.products ?? [])
-      .filter((p) => (p.product_name_pt || p.product_name) && p.code)
-      .map((p) => ({
-        code: p.code ?? '',
-        name: p.product_name_pt || p.product_name || '',
-        brand: p.brands?.split(',')[0].trim() || '',
-        description: p.generic_name_pt || p.generic_name || '',
-        imageUrl: p.image_url || '',
-      }))
+    const json = await res.json() as { products?: FoodResult[] }
+    return json.products ?? []
   } catch {
     return []
   }
@@ -63,29 +48,15 @@ async function searchByName(query: string): Promise<FoodResult[]> {
 
 async function lookupEan(ean: string): Promise<FoodResult | null> {
   try {
-    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${ean}.json`)
+    const base = import.meta.env.VITE_SUPABASE_URL as string
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+    const res = await fetch(
+      `${base}/functions/v1/search-products?ean=${encodeURIComponent(ean)}`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` } }
+    )
     if (!res.ok) return null
-    const json = await res.json() as {
-      status: number
-      product?: {
-        code?: string
-        product_name?: string
-        product_name_pt?: string
-        brands?: string
-        image_url?: string
-        generic_name?: string
-        generic_name_pt?: string
-      }
-    }
-    if (json.status !== 1 || !json.product) return null
-    const p = json.product
-    return {
-      code: ean,
-      name: p.product_name_pt || p.product_name || '',
-      brand: p.brands?.split(',')[0].trim() || '',
-      description: p.generic_name_pt || p.generic_name || '',
-      imageUrl: p.image_url || '',
-    }
+    const json = await res.json() as { products?: FoodResult[] }
+    return json.products?.[0] ?? null
   } catch {
     return null
   }
