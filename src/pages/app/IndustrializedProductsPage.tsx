@@ -30,40 +30,10 @@ interface FoodResult {
   imageUrl: string
 }
 
-async function lookupEan(ean: string): Promise<FoodResult | null> {
-  try {
-    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${ean}.json`)
-    if (!res.ok) return null
-    const json = await res.json() as {
-      status: number
-      product?: {
-        code?: string
-        product_name?: string
-        product_name_pt?: string
-        brands?: string
-        image_url?: string
-        generic_name?: string
-        generic_name_pt?: string
-      }
-    }
-    if (json.status !== 1 || !json.product) return null
-    const p = json.product
-    return {
-      code: ean,
-      name: p.product_name_pt || p.product_name || '',
-      brand: p.brands?.split(',')[0].trim() || '',
-      description: p.generic_name_pt || p.generic_name || '',
-      imageUrl: p.image_url || '',
-    }
-  } catch {
-    return null
-  }
-}
-
 async function searchByName(query: string): Promise<FoodResult[]> {
   try {
     const res = await fetch(
-      `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(query)}&fields=code,product_name,product_name_pt,brands,image_url,generic_name,generic_name_pt&page_size=20&countries_tags=en:brazil`
+      `https://br.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(query)}&fields=code,product_name,product_name_pt,brands,image_url,generic_name,generic_name_pt&page_size=20`
     )
     if (!res.ok) return []
     const json = await res.json() as {
@@ -88,6 +58,36 @@ async function searchByName(query: string): Promise<FoodResult[]> {
       }))
   } catch {
     return []
+  }
+}
+
+async function lookupEan(ean: string): Promise<FoodResult | null> {
+  try {
+    const res = await fetch(`https://br.openfoodfacts.org/api/v2/product/${ean}.json`)
+    if (!res.ok) return null
+    const json = await res.json() as {
+      status: number
+      product?: {
+        code?: string
+        product_name?: string
+        product_name_pt?: string
+        brands?: string
+        image_url?: string
+        generic_name?: string
+        generic_name_pt?: string
+      }
+    }
+    if (json.status !== 1 || !json.product) return null
+    const p = json.product
+    return {
+      code: ean,
+      name: p.product_name_pt || p.product_name || '',
+      brand: p.brands?.split(',')[0].trim() || '',
+      description: p.generic_name_pt || p.generic_name || '',
+      imageUrl: p.image_url || '',
+    }
+  } catch {
+    return null
   }
 }
 
