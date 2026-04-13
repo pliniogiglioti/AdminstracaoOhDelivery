@@ -22,13 +22,22 @@ const emptyForm = {
   active: true,
 }
 
-async function lookupEan(ean: string): Promise<Partial<typeof emptyForm> | null> {
+interface FoodResult {
+  code: string
+  name: string
+  brand: string
+  description: string
+  imageUrl: string
+}
+
+async function lookupEan(ean: string): Promise<FoodResult | null> {
   try {
     const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${ean}.json`)
     if (!res.ok) return null
     const json = await res.json() as {
       status: number
       product?: {
+        code?: string
         product_name?: string
         product_name_pt?: string
         brands?: string
@@ -40,6 +49,7 @@ async function lookupEan(ean: string): Promise<Partial<typeof emptyForm> | null>
     if (json.status !== 1 || !json.product) return null
     const p = json.product
     return {
+      code: ean,
       name: p.product_name_pt || p.product_name || '',
       brand: p.brands?.split(',')[0].trim() || '',
       description: p.generic_name_pt || p.generic_name || '',
@@ -47,6 +57,37 @@ async function lookupEan(ean: string): Promise<Partial<typeof emptyForm> | null>
     }
   } catch {
     return null
+  }
+}
+
+async function searchByName(query: string): Promise<FoodResult[]> {
+  try {
+    const res = await fetch(
+      `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=10&lc=pt`
+    )
+    if (!res.ok) return []
+    const json = await res.json() as {
+      products?: Array<{
+        code?: string
+        product_name?: string
+        product_name_pt?: string
+        brands?: string
+        image_url?: string
+        generic_name?: string
+        generic_name_pt?: string
+      }>
+    }
+    return (json.products ?? [])
+      .filter((p) => p.product_name_pt || p.product_name)
+      .map((p) => ({
+        code: p.code ?? '',
+        name: p.product_name_pt || p.product_name || '',
+        brand: p.brands?.split(',')[0].trim() || '',
+        description: p.generic_name_pt || p.generic_name || '',
+        imageUrl: p.image_url || '',
+      }))
+  } catch {
+    return []
   }
 }
 
@@ -60,6 +101,8 @@ export function IndustrializedProductsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [lookingUp, setLookingUp] = useState(false)
+  const [lookupQuery, setLookupQuery] = useState('')
+  const [lookupResults, setLookupResults] = useState<FoodResult[]>([])
   const [search, setSearch] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<IndustrializedProduct | null>(null)
 
@@ -88,6 +131,8 @@ export function IndustrializedProductsPage() {
   function openCreate() {
     setEditingId(null)
     setForm(emptyForm)
+    setLookupQuery('')
+    setLookupResults([])
     setModalOpen(true)
   }
 
@@ -101,6 +146,8 @@ export function IndustrializedProductsPage() {
       imageUrl: p.imageUrl ?? '',
       active: p.active,
     })
+    setLookupQuery('')
+    setLookupResults([])
     setModalOpen(true)
   }
 
@@ -108,22 +155,40 @@ export function IndustrializedProductsPage() {
     setModalOpen(false)
     setEditingId(null)
     setForm(emptyForm)
+    setLookupQuery('')
+    setLookupResults([])
   }
 
-  async function handleEanLookup() {
-    if (!form.ean.trim()) {
-      toast.error('Digite um EAN para buscar.')
-      return
-    }
+  function applyResult(r: FoodResult) {
+    setForm((f) => ({
+      ...f,
+      ean: r.code || f.ean,
+      name: r.name || f.name,
+      brand: r.brand || f.brand,
+      description: r.description || f.description,
+      imageUrl: r.imageUrl || f.imageUrl,
+    }))
+    setLookupResults([])
+    setLookupQuery('')
+  }
+
+  async function handleLookup() {
+    const q = lookupQuery.trim()
+    if (!q) { toast.error('Digite um EAN ou nome para buscar.'); return }
     setLookingUp(true)
     try {
-      const result = await lookupEan(form.ean.trim())
-      if (!result) {
-        toast.error('Produto nao encontrado na base Open Food Facts.')
-        return
+      // se for só números, busca por EAN
+      if (/^\d+$/.test(q)) {
+        const result = await lookupEan(q)
+        if (!result) { toast.error('Produto nao encontrado.'); return }
+        applyResult(result)
+        toast.success('Dados preenchidos.')
+      } else {
+        const results = await searchByName(q)
+        if (results.length === 0) { toast.error('Nenhum produto encontrado.'); return }
+        if (results.length === 1) { applyResult(results[0]); toast.success('Dados preenchidos.'); return }
+        setLookupResults(results)
       }
-      setForm((f) => ({ ...f, ...result }))
-      toast.success('Dados preenchidos automaticamente.')
     } finally {
       setLookingUp(false)
     }
@@ -135,22 +200,14 @@ export function IndustrializedProductsPage() {
     try {
       if (editingId !== null) {
         await updateIndustrializedProduct(editingId, {
-          name: form.name,
-          brand: form.brand,
-          description: form.description,
-          ean: form.ean,
-          imageUrl: form.imageUrl || null,
-          active: form.active,
+          name: form.name, brand: form.brand, description: form.description,
+          ean: form.ean, imageUrl: form.imageUrl || null, active: form.active,
         })
         toast.success('Produto atualizado.')
       } else {
         await createIndustrializedProduct({
-          name: form.name,
-          brand: form.brand,
-          description: form.description,
-          ean: form.ean,
-          imageUrl: form.imageUrl || null,
-          active: form.active,
+          name: form.name, brand: form.brand, description: form.description,
+          ean: form.ean, imageUrl: form.imageUrl || null, active: form.active,
         })
         toast.success('Produto criado.')
       }
@@ -158,11 +215,7 @@ export function IndustrializedProductsPage() {
       await load(search || undefined, page)
     } catch (error) {
       const msg = error instanceof Error ? error.message : ''
-      if (msg.includes('409') || msg.includes('duplicate') || msg.includes('unique')) {
-        toast.error('EAN ja cadastrado. Use um codigo diferente.')
-      } else {
-        toast.error(msg || 'Nao foi possivel salvar.')
-      }
+      toast.error(msg.includes('duplicate') || msg.includes('unique') ? 'EAN ja cadastrado.' : msg || 'Nao foi possivel salvar.')
     } finally {
       setSaving(false)
     }
@@ -195,12 +248,10 @@ export function IndustrializedProductsPage() {
         <PageHeader title="Produtos Industrializados" description="Catalogo de produtos industrializados com EAN." />
         <button type="button" onClick={openCreate}
           className="inline-flex h-11 items-center gap-2 rounded-2xl bg-coral-500 px-5 text-sm font-bold text-white hover:bg-coral-600">
-          <Plus className="h-4 w-4" />
-          Novo Produto
+          <Plus className="h-4 w-4" />Novo Produto
         </button>
       </div>
 
-      {/* Busca */}
       <form onSubmit={(e) => { e.preventDefault(); setPage(0); void load(search || undefined, 0) }} className="flex gap-2">
         <input value={search} onChange={(e) => setSearch(e.target.value)}
           className="h-11 flex-1 rounded-2xl border border-ink-100 px-4 text-sm outline-none focus:border-coral-300"
@@ -208,13 +259,10 @@ export function IndustrializedProductsPage() {
         <button type="submit" className="h-11 rounded-2xl bg-ink-900 px-5 text-sm font-bold text-white hover:bg-ink-700">Buscar</button>
         {search ? (
           <button type="button" onClick={() => { setSearch(''); setPage(0); void load(undefined, 0) }}
-            className="h-11 rounded-2xl border border-ink-100 px-4 text-sm font-bold text-ink-700 hover:bg-ink-50">
-            Limpar
-          </button>
+            className="h-11 rounded-2xl border border-ink-100 px-4 text-sm font-bold text-ink-700 hover:bg-ink-50">Limpar</button>
         ) : null}
       </form>
 
-      {/* Tabela */}
       <div className="panel-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] text-left text-sm">
@@ -236,8 +284,7 @@ export function IndustrializedProductsPage() {
               ) : products.map((p) => (
                 <tr key={p.id}>
                   <td className="px-4 py-4">
-                    {p.imageUrl
-                      ? <img src={p.imageUrl} alt={p.name} className="h-12 w-12 rounded-xl object-cover" />
+                    {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="h-12 w-12 rounded-xl object-cover" />
                       : <div className="h-12 w-12 rounded-xl bg-ink-100" />}
                   </td>
                   <td className="px-4 py-4 font-bold text-ink-900">{p.name}</td>
@@ -245,8 +292,7 @@ export function IndustrializedProductsPage() {
                   <td className="px-4 py-4 font-mono text-ink-600">{p.ean ?? '—'}</td>
                   <td className="px-4 py-4">
                     <button type="button" onClick={() => void toggleActive(p)}
-                      className={p.active
-                        ? 'rounded-2xl bg-mint-100 px-3 py-2 text-xs font-bold text-mint-700'
+                      className={p.active ? 'rounded-2xl bg-mint-100 px-3 py-2 text-xs font-bold text-mint-700'
                         : 'rounded-2xl bg-ink-50 px-3 py-2 text-xs font-bold text-ink-500'}>
                       {p.active ? 'Ativo' : 'Inativo'}
                     </button>
@@ -254,13 +300,9 @@ export function IndustrializedProductsPage() {
                   <td className="px-4 py-4">
                     <div className="flex gap-2">
                       <button type="button" onClick={() => openEdit(p)}
-                        className="rounded-2xl border border-ink-100 px-3 py-2 text-xs font-bold text-ink-700 hover:bg-ink-50">
-                        Editar
-                      </button>
+                        className="rounded-2xl border border-ink-100 px-3 py-2 text-xs font-bold text-ink-700 hover:bg-ink-50">Editar</button>
                       <button type="button" onClick={() => setConfirmDelete(p)}
-                        className="rounded-2xl bg-coral-50 px-3 py-2 text-xs font-bold text-coral-700 hover:bg-coral-100">
-                        Remover
-                      </button>
+                        className="rounded-2xl bg-coral-50 px-3 py-2 text-xs font-bold text-coral-700 hover:bg-coral-100">Remover</button>
                     </div>
                   </td>
                 </tr>
@@ -269,7 +311,6 @@ export function IndustrializedProductsPage() {
           </table>
         </div>
 
-        {/* Paginação */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between border-t border-ink-100 px-4 py-3">
             <p className="text-sm text-ink-500">
@@ -301,29 +342,48 @@ export function IndustrializedProductsPage() {
       <AnimatedModal open={modalOpen} onClose={closeModal} title={editingId !== null ? 'Editar Produto' : 'Novo Produto'} className="max-w-xl">
         <form onSubmit={handleSubmit} className="space-y-4">
 
-          {/* EAN com busca automática */}
-          <label className="block">
-            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">EAN / Codigo de barras</span>
-            <div className="mt-2 flex gap-2">
+          {/* Busca Open Food Facts */}
+          <div className="rounded-2xl border border-ink-100 bg-ink-50 p-4 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Buscar na base Open Food Facts</p>
+            <div className="flex gap-2">
               <input
-                value={form.ean}
-                onChange={(e) => setForm((f) => ({ ...f, ean: e.target.value }))}
-                className="h-11 flex-1 rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-                placeholder="7894900011517"
+                value={lookupQuery}
+                onChange={(e) => setLookupQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleLookup() } }}
+                className="h-10 flex-1 rounded-2xl border border-ink-100 bg-white px-3 text-sm outline-none focus:border-coral-300"
+                placeholder="EAN (7894900011517) ou nome (Coca-Cola)"
               />
-              <button
-                type="button"
-                onClick={() => void handleEanLookup()}
-                disabled={lookingUp}
-                className="inline-flex h-11 items-center gap-2 rounded-2xl bg-ink-900 px-4 text-sm font-bold text-white hover:bg-ink-700 disabled:opacity-60"
-              >
-                {lookingUp
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <Search className="h-4 w-4" />}
+              <button type="button" onClick={() => void handleLookup()} disabled={lookingUp}
+                className="inline-flex h-10 items-center gap-2 rounded-2xl bg-ink-900 px-4 text-sm font-bold text-white hover:bg-ink-700 disabled:opacity-60">
+                {lookingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 {lookingUp ? 'Buscando...' : 'Buscar'}
               </button>
             </div>
-            <p className="mt-1 text-xs text-ink-400">Digite o EAN e clique em Buscar para preencher automaticamente via Open Food Facts.</p>
+
+            {/* Resultados */}
+            {lookupResults.length > 0 && (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {lookupResults.map((r) => (
+                  <button key={r.code} type="button" onClick={() => applyResult(r)}
+                    className="flex w-full items-center gap-3 rounded-2xl border border-ink-100 bg-white p-2 text-left hover:border-coral-300 hover:bg-coral-50">
+                    {r.imageUrl
+                      ? <img src={r.imageUrl} alt={r.name} className="h-10 w-10 shrink-0 rounded-xl object-cover" />
+                      : <div className="h-10 w-10 shrink-0 rounded-xl bg-ink-100" />}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-ink-900">{r.name}</p>
+                      <p className="truncate text-xs text-ink-500">{r.brand} {r.code ? `· ${r.code}` : ''}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <label className="block">
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">EAN</span>
+            <input value={form.ean} onChange={(e) => setForm((f) => ({ ...f, ean: e.target.value }))}
+              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
+              placeholder="7894900011517" />
           </label>
 
           <label className="block">
@@ -343,8 +403,7 @@ export function IndustrializedProductsPage() {
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Descricao</span>
             <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2}
-              className="mt-2 w-full rounded-2xl border border-ink-100 px-3 py-2 text-sm outline-none focus:border-coral-300"
-              placeholder="Descricao do produto..." />
+              className="mt-2 w-full rounded-2xl border border-ink-100 px-3 py-2 text-sm outline-none focus:border-coral-300" />
           </label>
 
           <label className="block">
@@ -366,9 +425,7 @@ export function IndustrializedProductsPage() {
 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={closeModal}
-              className="h-11 rounded-2xl border border-ink-100 px-5 text-sm font-semibold text-ink-700 hover:bg-ink-50">
-              Cancelar
-            </button>
+              className="h-11 rounded-2xl border border-ink-100 px-5 text-sm font-semibold text-ink-700 hover:bg-ink-50">Cancelar</button>
             <button type="submit" disabled={saving}
               className="h-11 rounded-2xl bg-coral-500 px-5 text-sm font-bold text-white hover:bg-coral-600 disabled:opacity-60">
               {saving ? 'Salvando...' : editingId !== null ? 'Salvar' : 'Cadastrar'}
@@ -377,20 +434,16 @@ export function IndustrializedProductsPage() {
         </form>
       </AnimatedModal>
 
-      {/* Modal confirmação delete */}
+      {/* Modal delete */}
       <AnimatedModal open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title="Remover produto">
         <p className="text-sm text-ink-500">
           Tem certeza que deseja remover <span className="font-bold text-ink-900">{confirmDelete?.name}</span>?
         </p>
         <div className="mt-6 flex justify-end gap-3">
           <button type="button" onClick={() => setConfirmDelete(null)}
-            className="h-11 rounded-2xl border border-ink-100 px-5 text-sm font-semibold text-ink-700 hover:bg-ink-50">
-            Cancelar
-          </button>
+            className="h-11 rounded-2xl border border-ink-100 px-5 text-sm font-semibold text-ink-700 hover:bg-ink-50">Cancelar</button>
           <button type="button" onClick={() => confirmDelete && void handleDelete(confirmDelete)}
-            className="h-11 rounded-2xl bg-coral-500 px-5 text-sm font-bold text-white hover:bg-coral-600">
-            Remover
-          </button>
+            className="h-11 rounded-2xl bg-coral-500 px-5 text-sm font-bold text-white hover:bg-coral-600">Remover</button>
         </div>
       </AnimatedModal>
     </div>
