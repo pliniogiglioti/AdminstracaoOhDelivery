@@ -6,6 +6,7 @@ import {
   Headphones,
   KeyRound,
   LayoutDashboard,
+  LayoutTemplate,
   LogOut,
   ShieldCheck,
   Store,
@@ -32,6 +33,7 @@ const navItems: Array<{ id: AdminSection; label: string; icon: LucideIcon; to: s
   { id: 'financeiro', label: 'Financeiro', icon: Wallet, to: '/app/financeiro' },
   { id: 'suporte', label: 'Suporte', icon: Headphones, to: '/app/suporte' },
   { id: 'access_control', label: 'Controle de Acesso', icon: KeyRound, to: '/app/controle-de-acesso' },
+  { id: 'home_content', label: 'Conteudo da Home', icon: LayoutTemplate, to: '/app/home-content' },
 ]
 
 function navBadgeCount(id: AdminSection, counts: SidebarCounts): number {

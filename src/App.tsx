@@ -5,6 +5,7 @@ import { ApprovalsPage } from '@/pages/app/ApprovalsPage'
 import { CategoriesPage } from '@/pages/app/CategoriesPage'
 import { DashboardPage } from '@/pages/app/DashboardPage'
 import { FinancialPage } from '@/pages/app/FinancialPage'
+import { HomeContentPage } from '@/pages/app/HomeContentPage'
 import { OrdersPage } from '@/pages/app/OrdersPage'
 import { PartnersPage } from '@/pages/app/PartnersPage'
 import { StoresPage } from '@/pages/app/StoresPage'
@@ -26,6 +27,7 @@ export function App() {
           <Route path="financeiro" element={<FinancialPage />} />
           <Route path="suporte" element={<SupportPage />} />
           <Route path="controle-de-acesso" element={<AccessControlPage />} />
+          <Route path="home-content" element={<HomeContentPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -5,10 +5,12 @@ import {
   ALL_ADMIN_PROFILE_ROLES,
 } from '@/lib/accessControl'
 import type {
+  AdminHomeHighlight,
   AdminOrder,
   AdminPartner,
   AdminRole,
   AdminStore,
+  AdminStoreBanner,
   AdminUser,
   DashboardMetrics,
   RegistrationStatus,
@@ -510,4 +512,130 @@ export async function fetchOrders(filters?: { storeId?: string; status?: string 
   if (error) throw error
 
   return ((data ?? []) as OrderRow[]).map(mapOrder)
+}
+
+// ─── Home Content ────────────────────────────────────────────────────────────
+
+export async function fetchHomeHighlights(): Promise<AdminHomeHighlight[]> {
+  const { data, error } = await client()
+    .from('home_highlights')
+    .select('*')
+    .order('sort_order', { ascending: true })
+  if (error) throw error
+  return (data ?? []).map((row) => ({
+    id: String(row.id),
+    slot: String(row.slot),
+    title: String(row.title),
+    subtitle: String(row.subtitle ?? ''),
+    ctaLabel: String(row.cta_label ?? 'Ver ofertas'),
+    ctaRoute: String(row.cta_route ?? '/app/busca'),
+    imageUrl: row.image_url ? String(row.image_url) : null,
+    active: Boolean(row.active),
+    sortOrder: Number(row.sort_order ?? 0),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at ?? row.created_at),
+  }))
+}
+
+export async function updateHomeHighlight(
+  id: string,
+  patch: Partial<{
+    title: string
+    subtitle: string
+    ctaLabel: string
+    ctaRoute: string
+    imageUrl: string | null
+    active: boolean
+    sortOrder: number
+  }>
+): Promise<void> {
+  const dbPatch: Record<string, unknown> = {}
+  if ('title' in patch) dbPatch.title = patch.title
+  if ('subtitle' in patch) dbPatch.subtitle = patch.subtitle
+  if ('ctaLabel' in patch) dbPatch.cta_label = patch.ctaLabel
+  if ('ctaRoute' in patch) dbPatch.cta_route = patch.ctaRoute
+  if ('imageUrl' in patch) dbPatch.image_url = patch.imageUrl
+  if ('active' in patch) dbPatch.active = patch.active
+  if ('sortOrder' in patch) dbPatch.sort_order = patch.sortOrder
+
+  const { error } = await client().from('home_highlights').update(dbPatch).eq('id', id)
+  if (error) throw error
+}
+
+export async function fetchStoreBanners(): Promise<AdminStoreBanner[]> {
+  const { data, error } = await client()
+    .from('store_banners')
+    .select('*')
+    .order('sort_order', { ascending: true })
+  if (error) throw error
+  return (data ?? []).map((row) => ({
+    id: String(row.id),
+    storeId: row.store_id ? String(row.store_id) : null,
+    storeSlug: row.store_slug ? String(row.store_slug) : null,
+    title: String(row.title),
+    subtitle: row.subtitle ? String(row.subtitle) : null,
+    ctaLabel: String(row.cta_label ?? 'Ver loja'),
+    gradientClass: String(row.gradient_class ?? 'from-coral-400 via-coral-500 to-sand-500'),
+    imageUrl: row.image_url ? String(row.image_url) : null,
+    sortOrder: Number(row.sort_order ?? 0),
+    active: Boolean(row.active),
+    createdAt: String(row.created_at),
+  }))
+}
+
+export async function createStoreBanner(data: {
+  title: string
+  subtitle: string
+  ctaLabel: string
+  gradientClass: string
+  imageUrl: string | null
+  storeSlug: string | null
+  sortOrder: number
+  active: boolean
+}): Promise<void> {
+  const { error } = await client().from('store_banners').insert({
+    title: data.title,
+    subtitle: data.subtitle,
+    cta_label: data.ctaLabel,
+    gradient_class: data.gradientClass,
+    image_url: data.imageUrl,
+    store_slug: data.storeSlug,
+    sort_order: data.sortOrder,
+    active: data.active,
+  })
+  if (error) throw error
+}
+
+export async function updateStoreBanner(
+  id: string,
+  data: {
+    title: string
+    subtitle: string
+    ctaLabel: string
+    gradientClass: string
+    imageUrl: string | null
+    storeSlug: string | null
+    sortOrder: number
+    active: boolean
+  }
+): Promise<void> {
+  const { error } = await client()
+    .from('store_banners')
+    .update({
+      title: data.title,
+      subtitle: data.subtitle,
+      cta_label: data.ctaLabel,
+      gradient_class: data.gradientClass,
+      image_url: data.imageUrl,
+      store_slug: data.storeSlug,
+      sort_order: data.sortOrder,
+      active: data.active,
+    })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteStoreBanner(id: string): Promise<void> {
+  const { error } = await client().from('store_banners').delete().eq('id', id)
+  if (error) throw error
 }

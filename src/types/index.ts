@@ -126,4 +126,33 @@ export type AdminSection =
   | 'suporte'
   | 'financeiro'
   | 'access_control'
+  | 'home_content'
+
+export interface AdminHomeHighlight {
+  id: string
+  slot: string
+  title: string
+  subtitle: string
+  ctaLabel: string
+  ctaRoute: string
+  imageUrl: string | null
+  active: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AdminStoreBanner {
+  id: string
+  storeId: string | null
+  storeSlug: string | null
+  title: string
+  subtitle: string | null
+  ctaLabel: string
+  gradientClass: string
+  imageUrl: string | null
+  sortOrder: number
+  active: boolean
+  createdAt: string
+}
 

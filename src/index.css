@@ -67,6 +67,10 @@
     @apply bg-coral-50 text-coral-700;
   }
 
+  .input-field {
+    @apply h-11 w-full rounded-2xl border border-ink-100 bg-white px-3 text-sm outline-none focus:border-coral-300;
+  }
+
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
