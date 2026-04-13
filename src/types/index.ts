@@ -119,7 +119,7 @@ export interface SupportTicket {
 export type ProductType = 'preparado' | 'industrializado'
 
 export interface IndustrializedProduct {
-  id: string
+  id: number
   name: string
   brand: string | null
   description: string | null

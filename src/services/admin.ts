@@ -656,7 +656,7 @@ interface IndustrializedProductRow {
 
 function mapIndustrializedProduct(row: IndustrializedProductRow): IndustrializedProduct {
   return {
-    id: String(row.id),
+    id: row.id,
     name: row.name,
     brand: row.brand,
     description: row.description,
@@ -703,7 +703,7 @@ export async function createIndustrializedProduct(input: {
 }
 
 export async function updateIndustrializedProduct(
-  id: string,
+  id: number,
   input: Partial<{
     name: string
     brand: string
@@ -725,7 +725,7 @@ export async function updateIndustrializedProduct(
   if (error) throw error
 }
 
-export async function deleteIndustrializedProduct(id: string): Promise<void> {
+export async function deleteIndustrializedProduct(id: number): Promise<void> {
   const { error } = await client().from('industrializados').delete().eq('id', id)
   if (error) throw error
 }
