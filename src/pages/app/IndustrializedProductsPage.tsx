@@ -96,7 +96,12 @@ export function IndustrializedProductsPage() {
       closeModal()
       await load(search || undefined)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar.')
+      const msg = error instanceof Error ? error.message : ''
+      if (msg.includes('409') || msg.includes('duplicate') || msg.includes('unique')) {
+        toast.error('EAN ja cadastrado. Use um codigo diferente.')
+      } else {
+        toast.error(msg || 'Nao foi possivel salvar.')
+      }
     } finally {
       setSaving(false)
     }
