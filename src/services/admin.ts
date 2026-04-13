@@ -13,6 +13,7 @@ import type {
   AdminStoreBanner,
   AdminUser,
   DashboardMetrics,
+  IndustrializedProduct,
   RegistrationStatus,
   StoreCategory,
   StoreOption,
@@ -637,5 +638,113 @@ export async function updateStoreBanner(
 
 export async function deleteStoreBanner(id: string): Promise<void> {
   const { error } = await client().from('store_banners').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ─── Produtos Industrializados ────────────────────────────────────────────────
+
+interface IndustrializedProductRow {
+  id: string
+  name: string
+  description: string | null
+  ean: string | null
+  price: number
+  compare_at_price: number | null
+  image_url: string | null
+  active: boolean
+  featured: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+function mapIndustrializedProduct(row: IndustrializedProductRow): IndustrializedProduct {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    ean: row.ean,
+    price: row.price,
+    compareAtPrice: row.compare_at_price,
+    imageUrl: row.image_url,
+    active: row.active,
+    featured: row.featured,
+    sortOrder: row.sort_order,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+export async function fetchIndustrializedProducts(search?: string): Promise<IndustrializedProduct[]> {
+  let query = client()
+    .from('products')
+    .select('id,name,description,ean,price,compare_at_price,image_url,active,featured,sort_order,created_at,updated_at')
+    .eq('product_type', 'industrializado')
+    .order('sort_order', { ascending: true })
+    .limit(500)
+
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,ean.ilike.%${search}%`)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return ((data ?? []) as IndustrializedProductRow[]).map(mapIndustrializedProduct)
+}
+
+export async function createIndustrializedProduct(input: {
+  name: string
+  description: string
+  ean: string
+  price: number
+  compareAtPrice: number | null
+  active: boolean
+  featured: boolean
+  sortOrder: number
+}): Promise<void> {
+  const { error } = await client().from('products').insert({
+    name: input.name,
+    description: input.description || null,
+    ean: input.ean || null,
+    price: input.price,
+    compare_at_price: input.compareAtPrice,
+    active: input.active,
+    featured: input.featured,
+    sort_order: input.sortOrder,
+    product_type: 'industrializado',
+    store_id: '00000000-0000-0000-0000-000000000000', // placeholder — produtos globais
+  })
+  if (error) throw error
+}
+
+export async function updateIndustrializedProduct(
+  id: string,
+  input: Partial<{
+    name: string
+    description: string
+    ean: string
+    price: number
+    compareAtPrice: number | null
+    active: boolean
+    featured: boolean
+    sortOrder: number
+  }>
+): Promise<void> {
+  const payload: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (input.name !== undefined) payload.name = input.name
+  if (input.description !== undefined) payload.description = input.description || null
+  if (input.ean !== undefined) payload.ean = input.ean || null
+  if (input.price !== undefined) payload.price = input.price
+  if ('compareAtPrice' in input) payload.compare_at_price = input.compareAtPrice
+  if (input.active !== undefined) payload.active = input.active
+  if (input.featured !== undefined) payload.featured = input.featured
+  if (input.sortOrder !== undefined) payload.sort_order = input.sortOrder
+
+  const { error } = await client().from('products').update(payload).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteIndustrializedProduct(id: string): Promise<void> {
+  const { error } = await client().from('products').delete().eq('id', id)
   if (error) throw error
 }

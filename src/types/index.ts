@@ -116,6 +116,23 @@ export interface SupportTicket {
   updatedAt: string
 }
 
+export type ProductType = 'preparado' | 'industrializado'
+
+export interface IndustrializedProduct {
+  id: string
+  name: string
+  description: string | null
+  ean: string | null
+  price: number
+  compareAtPrice: number | null
+  imageUrl: string | null
+  active: boolean
+  featured: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
 export type AdminSection =
   | 'dashboard'
   | 'aprovacoes'
@@ -127,6 +144,7 @@ export type AdminSection =
   | 'financeiro'
   | 'access_control'
   | 'home_content'
+  | 'produtos_industrializados'
 
 export interface AdminHomeHighlight {
   id: string

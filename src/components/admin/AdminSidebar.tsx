@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   LayoutTemplate,
   LogOut,
+  Package,
   ShieldCheck,
   Store,
   Tags,
@@ -34,6 +35,7 @@ const navItems: Array<{ id: AdminSection; label: string; icon: LucideIcon; to: s
   { id: 'suporte', label: 'Suporte', icon: Headphones, to: '/app/suporte' },
   { id: 'access_control', label: 'Controle de Acesso', icon: KeyRound, to: '/app/controle-de-acesso' },
   { id: 'home_content', label: 'Conteudo da Home', icon: LayoutTemplate, to: '/app/home-content' },
+  { id: 'produtos_industrializados', label: 'Produtos Industrializados', icon: Package, to: '/app/produtos-industrializados' },
 ]
 
 function navBadgeCount(id: AdminSection, counts: SidebarCounts): number {

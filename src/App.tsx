@@ -6,6 +6,7 @@ import { CategoriesPage } from '@/pages/app/CategoriesPage'
 import { DashboardPage } from '@/pages/app/DashboardPage'
 import { FinancialPage } from '@/pages/app/FinancialPage'
 import { HomeContentPage } from '@/pages/app/HomeContentPage'
+import { IndustrializedProductsPage } from '@/pages/app/IndustrializedProductsPage'
 import { OrdersPage } from '@/pages/app/OrdersPage'
 import { PartnersPage } from '@/pages/app/PartnersPage'
 import { StoresPage } from '@/pages/app/StoresPage'
@@ -28,6 +29,7 @@ export function App() {
           <Route path="suporte" element={<SupportPage />} />
           <Route path="controle-de-acesso" element={<AccessControlPage />} />
           <Route path="home-content" element={<HomeContentPage />} />
+          <Route path="produtos-industrializados" element={<IndustrializedProductsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

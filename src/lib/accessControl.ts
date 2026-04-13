@@ -19,6 +19,7 @@ export const ALL_SECTIONS: AdminSection[] = [
   'suporte',
   'access_control',
   'home_content',
+  'produtos_industrializados',
 ]
 
 export const SECTION_LABELS: Record<AdminSection, string> = {
@@ -32,6 +33,7 @@ export const SECTION_LABELS: Record<AdminSection, string> = {
   suporte: 'Suporte',
   access_control: 'Controle de Acesso',
   home_content: 'Conteudo da Home',
+  produtos_industrializados: 'Produtos Industrializados',
 }
 
 const DEFAULT_ROLE_DEFS: RoleDefinition[] = [
@@ -47,7 +49,7 @@ const DEFAULT_ROLE_DEFS: RoleDefinition[] = [
     label: 'Operacoes',
     description: 'Gerencia lojas, parceiros, aprovacoes e pedidos.',
     badge: 'bg-sand-100 text-sand-800',
-    sections: ['dashboard', 'aprovacoes', 'lojas', 'parceiros', 'categorias', 'pedidos', 'home_content'],
+    sections: ['dashboard', 'aprovacoes', 'lojas', 'parceiros', 'categorias', 'pedidos', 'home_content', 'produtos_industrializados'],
   },
   {
     id: 'financeiro',
