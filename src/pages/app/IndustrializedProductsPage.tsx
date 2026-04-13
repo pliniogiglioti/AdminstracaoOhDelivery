@@ -33,7 +33,7 @@ interface FoodResult {
 async function searchByName(query: string): Promise<FoodResult[]> {
   try {
     const res = await fetch(
-      `https://br.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(query)}&fields=code,product_name,product_name_pt,brands,image_url,generic_name,generic_name_pt&page_size=20`
+      `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(query)}&fields=code,product_name,product_name_pt,brands,image_url,generic_name,generic_name_pt&page_size=20&countries_tags=en:brazil`
     )
     if (!res.ok) return []
     const json = await res.json() as {
@@ -63,7 +63,7 @@ async function searchByName(query: string): Promise<FoodResult[]> {
 
 async function lookupEan(ean: string): Promise<FoodResult | null> {
   try {
-    const res = await fetch(`https://br.openfoodfacts.org/api/v2/product/${ean}.json`)
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${ean}.json`)
     if (!res.ok) return null
     const json = await res.json() as {
       status: number
