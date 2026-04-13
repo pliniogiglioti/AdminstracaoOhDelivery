@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Search, Loader2 } from 'lucide-react'
 import { PageHeader } from '@/components/admin/AdminUi'
 import { AnimatedModal } from '@/components/admin/AnimatedModal'
 import {
@@ -22,6 +22,34 @@ const emptyForm = {
   active: true,
 }
 
+async function lookupEan(ean: string): Promise<Partial<typeof emptyForm> | null> {
+  try {
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${ean}.json`)
+    if (!res.ok) return null
+    const json = await res.json() as {
+      status: number
+      product?: {
+        product_name?: string
+        product_name_pt?: string
+        brands?: string
+        image_url?: string
+        generic_name?: string
+        generic_name_pt?: string
+      }
+    }
+    if (json.status !== 1 || !json.product) return null
+    const p = json.product
+    return {
+      name: p.product_name_pt || p.product_name || '',
+      brand: p.brands?.split(',')[0].trim() || '',
+      description: p.generic_name_pt || p.generic_name || '',
+      imageUrl: p.image_url || '',
+    }
+  } catch {
+    return null
+  }
+}
+
 export function IndustrializedProductsPage() {
   const [products, setProducts] = useState<IndustrializedProduct[]>([])
   const [total, setTotal] = useState(0)
@@ -31,6 +59,7 @@ export function IndustrializedProductsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [lookingUp, setLookingUp] = useState(false)
   const [search, setSearch] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<IndustrializedProduct | null>(null)
 
@@ -79,6 +108,25 @@ export function IndustrializedProductsPage() {
     setModalOpen(false)
     setEditingId(null)
     setForm(emptyForm)
+  }
+
+  async function handleEanLookup() {
+    if (!form.ean.trim()) {
+      toast.error('Digite um EAN para buscar.')
+      return
+    }
+    setLookingUp(true)
+    try {
+      const result = await lookupEan(form.ean.trim())
+      if (!result) {
+        toast.error('Produto nao encontrado na base Open Food Facts.')
+        return
+      }
+      setForm((f) => ({ ...f, ...result }))
+      toast.success('Dados preenchidos automaticamente.')
+    } finally {
+      setLookingUp(false)
+    }
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -252,32 +300,53 @@ export function IndustrializedProductsPage() {
       {/* Modal criar/editar */}
       <AnimatedModal open={modalOpen} onClose={closeModal} title={editingId !== null ? 'Editar Produto' : 'Novo Produto'} className="max-w-xl">
         <form onSubmit={handleSubmit} className="space-y-4">
+
+          {/* EAN com busca automática */}
+          <label className="block">
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">EAN / Codigo de barras</span>
+            <div className="mt-2 flex gap-2">
+              <input
+                value={form.ean}
+                onChange={(e) => setForm((f) => ({ ...f, ean: e.target.value }))}
+                className="h-11 flex-1 rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
+                placeholder="7894900011517"
+              />
+              <button
+                type="button"
+                onClick={() => void handleEanLookup()}
+                disabled={lookingUp}
+                className="inline-flex h-11 items-center gap-2 rounded-2xl bg-ink-900 px-4 text-sm font-bold text-white hover:bg-ink-700 disabled:opacity-60"
+              >
+                {lookingUp
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Search className="h-4 w-4" />}
+                {lookingUp ? 'Buscando...' : 'Buscar'}
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-ink-400">Digite o EAN e clique em Buscar para preencher automaticamente via Open Food Facts.</p>
+          </label>
+
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Nome *</span>
             <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required
               className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
               placeholder="Coca-Cola Lata 350ml" />
           </label>
-          <div className="grid grid-cols-2 gap-4">
-            <label className="block">
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Marca</span>
-              <input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))}
-                className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-                placeholder="Coca-Cola" />
-            </label>
-            <label className="block">
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">EAN</span>
-              <input value={form.ean} onChange={(e) => setForm((f) => ({ ...f, ean: e.target.value }))}
-                className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-                placeholder="7894900011517" />
-            </label>
-          </div>
+
+          <label className="block">
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Marca</span>
+            <input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))}
+              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
+              placeholder="Coca-Cola" />
+          </label>
+
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Descricao</span>
             <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2}
               className="mt-2 w-full rounded-2xl border border-ink-100 px-3 py-2 text-sm outline-none focus:border-coral-300"
               placeholder="Descricao do produto..." />
           </label>
+
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">URL da Imagem</span>
             <input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
@@ -285,6 +354,7 @@ export function IndustrializedProductsPage() {
               placeholder="https://..." />
             {form.imageUrl ? <img src={form.imageUrl} alt="preview" className="mt-2 h-20 w-20 rounded-xl object-cover" /> : null}
           </label>
+
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Ativo</span>
             <select value={form.active ? 'true' : 'false'} onChange={(e) => setForm((f) => ({ ...f, active: e.target.value === 'true' }))}
@@ -293,6 +363,7 @@ export function IndustrializedProductsPage() {
               <option value="false">Nao</option>
             </select>
           </label>
+
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={closeModal}
               className="h-11 rounded-2xl border border-ink-100 px-5 text-sm font-semibold text-ink-700 hover:bg-ink-50">
@@ -300,7 +371,7 @@ export function IndustrializedProductsPage() {
             </button>
             <button type="submit" disabled={saving}
               className="h-11 rounded-2xl bg-coral-500 px-5 text-sm font-bold text-white hover:bg-coral-600 disabled:opacity-60">
-              {saving ? 'Salvando...' : editingId !== null ? 'Salvar' : 'Criar'}
+              {saving ? 'Salvando...' : editingId !== null ? 'Salvar' : 'Cadastrar'}
             </button>
           </div>
         </form>
