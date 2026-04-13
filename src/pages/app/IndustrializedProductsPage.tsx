@@ -30,22 +30,6 @@ interface FoodResult {
   imageUrl: string
 }
 
-async function searchByName(query: string): Promise<FoodResult[]> {
-  try {
-    const base = import.meta.env.VITE_SUPABASE_URL as string
-    const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-    const res = await fetch(
-      `${base}/functions/v1/search-products?q=${encodeURIComponent(query)}`,
-      { headers: { apikey: key, Authorization: `Bearer ${key}` } }
-    )
-    if (!res.ok) return []
-    const json = await res.json() as { products?: FoodResult[] }
-    return json.products ?? []
-  } catch {
-    return []
-  }
-}
-
 async function lookupEan(ean: string): Promise<FoodResult | null> {
   try {
     const base = import.meta.env.VITE_SUPABASE_URL as string
@@ -55,8 +39,8 @@ async function lookupEan(ean: string): Promise<FoodResult | null> {
       { headers: { apikey: key, Authorization: `Bearer ${key}` } }
     )
     if (!res.ok) return null
-    const json = await res.json() as { products?: FoodResult[] }
-    return json.products?.[0] ?? null
+    const json = await res.json() as { product?: FoodResult }
+    return json.product ?? null
   } catch {
     return null
   }
@@ -145,21 +129,14 @@ export function IndustrializedProductsPage() {
 
   async function handleLookup() {
     const q = lookupQuery.trim()
-    if (!q) { toast.error('Digite um EAN ou nome para buscar.'); return }
+    if (!q) { toast.error('Digite um EAN para buscar.'); return }
+    if (!/^\d+$/.test(q)) { toast.error('A Cosmos busca apenas por EAN (somente numeros).'); return }
     setLookingUp(true)
     try {
-      // se for só números, busca por EAN
-      if (/^\d+$/.test(q)) {
-        const result = await lookupEan(q)
-        if (!result) { toast.error('Produto nao encontrado.'); return }
-        applyResult(result)
-        toast.success('Dados preenchidos.')
-      } else {
-        const results = await searchByName(q)
-        if (results.length === 0) { toast.error('Nenhum produto encontrado.'); return }
-        if (results.length === 1) { applyResult(results[0]); toast.success('Dados preenchidos.'); return }
-        setLookupResults(results)
-      }
+      const result = await lookupEan(q)
+      if (!result) { toast.error('Produto nao encontrado na base Cosmos.'); return }
+      applyResult(result)
+      toast.success('Dados preenchidos automaticamente.')
     } finally {
       setLookingUp(false)
     }
@@ -315,25 +292,25 @@ export function IndustrializedProductsPage() {
 
           {/* Coluna esquerda: busca */}
           <div className="space-y-3">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Buscar via Open Food Facts</p>
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Buscar por EAN (Cosmos)</p>
             <div className="flex gap-2">
               <input
                 value={lookupQuery}
                 onChange={(e) => setLookupQuery(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleLookup() } }}
                 className="h-10 flex-1 rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-                placeholder="EAN ou nome do produto"
+                placeholder="7894900011517"
               />
               <button type="button" onClick={() => void handleLookup()} disabled={lookingUp}
                 className="inline-flex h-10 items-center gap-1 rounded-2xl bg-ink-900 px-3 text-sm font-bold text-white hover:bg-ink-700 disabled:opacity-60">
                 {lookingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               </button>
             </div>
-            <p className="text-xs text-ink-400">Digite o EAN ou nome e clique no resultado para preencher o formulario.</p>
+            <p className="text-xs text-ink-400">Digite o codigo de barras EAN e clique em buscar. Os dados serao preenchidos automaticamente via Cosmos.</p>
 
             <div className="space-y-2 max-h-[420px] overflow-y-auto">
               {lookupResults.length === 0 && !lookingUp && (
-                <p className="py-8 text-center text-sm text-ink-400">Nenhum resultado ainda.</p>
+                <p className="py-8 text-center text-sm text-ink-400">Digite um EAN e clique buscar.</p>
               )}
               {lookupResults.map((r) => (
                 <button key={r.code} type="button" onClick={() => applyResult(r)}

@@ -11,56 +11,61 @@ serve(async (req) => {
   }
 
   const url = new URL(req.url)
-  const query = url.searchParams.get('q') ?? ''
   const ean = url.searchParams.get('ean') ?? ''
 
+  if (!ean) {
+    return new Response(JSON.stringify({ error: 'EAN obrigatorio' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const token = Deno.env.get('COSMOS_TOKEN')
+  if (!token) {
+    return new Response(JSON.stringify({ error: 'COSMOS_TOKEN nao configurado' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   try {
-    let apiUrl: string
+    const res = await fetch(`https://api.cosmos.bluesoft.com.br/gtins/${ean}`, {
+      headers: {
+        'X-Cosmos-Token': token,
+        'Content-Type': 'application/json',
+        'User-Agent': 'ohdelivery-admin/1.0',
+      },
+    })
 
-    if (ean) {
-      apiUrl = `https://world.openfoodfacts.org/api/v2/product/${ean}.json`
-      const res = await fetch(apiUrl)
-      const json = await res.json()
-
-      if (json.status !== 1 || !json.product) {
-        return new Response(JSON.stringify({ products: [] }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
-      }
-
-      const p = json.product
-      return new Response(JSON.stringify({
-        products: [{
-          code: ean,
-          name: p.product_name_pt || p.product_name || '',
-          brand: (p.brands ?? '').split(',')[0].trim(),
-          description: p.generic_name_pt || p.generic_name || '',
-          imageUrl: p.image_url || '',
-        }]
-      }), {
+    if (res.status === 404) {
+      return new Response(JSON.stringify({ product: null }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    apiUrl = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(query)}&fields=code,product_name,product_name_pt,brands,image_url,generic_name,generic_name_pt&page_size=20&countries_tags=en:brazil`
-    const res = await fetch(apiUrl)
-    const json = await res.json()
+    if (!res.ok) {
+      return new Response(JSON.stringify({ error: `Cosmos retornou ${res.status}` }), {
+        status: res.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
-    const products = (json.products ?? [])
-      .filter((p: Record<string, string>) => (p.product_name_pt || p.product_name) && p.code)
-      .map((p: Record<string, string>) => ({
-        code: p.code ?? '',
-        name: p.product_name_pt || p.product_name || '',
-        brand: (p.brands ?? '').split(',')[0].trim(),
-        description: p.generic_name_pt || p.generic_name || '',
-        imageUrl: p.image_url || '',
-      }))
+    const data = await res.json()
 
-    return new Response(JSON.stringify({ products }), {
+    // Cosmos retorna: description, brand { name }, thumbnail, avg_price
+    const product = {
+      code: ean,
+      name: data.description ?? '',
+      brand: data.brand?.name ?? '',
+      description: data.description ?? '',
+      imageUrl: data.thumbnail ?? data.picture ?? '',
+    }
+
+    return new Response(JSON.stringify({ product }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err), products: [] }), {
+    return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
