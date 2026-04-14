@@ -13,6 +13,8 @@ import type { IndustrializedProduct } from '@/types'
 
 const DEFAULT_IMAGE = 'https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/painel-vkbwb8/assets/dykp0g9ghdjn/error.png'
 
+const PAGE_SIZE = 10
+
 const emptyForm = {
   name: '',
   brand: '',
