@@ -256,7 +256,11 @@ export function IndustrializedProductsPage() {
             <input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
               className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
               placeholder="https://..." />
-            {form.imageUrl ? <img src={form.imageUrl} alt="preview" className="mt-2 h-16 w-16 rounded-xl object-cover" /> : null}
+            <img
+              src={form.imageUrl || 'https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/painel-vkbwb8/assets/dykp0g9ghdjn/error.png'}
+              alt="preview"
+              className="mt-2 h-16 w-16 rounded-xl object-cover"
+            />
           </label>
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Ativo</span>
