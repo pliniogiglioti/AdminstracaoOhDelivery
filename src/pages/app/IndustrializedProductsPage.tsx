@@ -140,10 +140,9 @@ export function IndustrializedProductsPage() {
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); setPage(0); void load(search || undefined, 0) }} className="flex gap-2">
-        <input value={search} onChange={(e) => setSearch(e.target.value)}
+        <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); void load(e.target.value || undefined, 0) }}
           className="h-11 flex-1 rounded-2xl border border-ink-100 px-4 text-sm outline-none focus:border-coral-300"
           placeholder="Buscar por nome, marca ou EAN..." />
-        <button type="submit" className="h-11 rounded-2xl bg-ink-900 px-5 text-sm font-bold text-white hover:bg-ink-700">Buscar</button>
         {search ? (
           <button type="button" onClick={() => { setSearch(''); setPage(0); void load(undefined, 0) }}
             className="h-11 rounded-2xl border border-ink-100 px-4 text-sm font-bold text-ink-700 hover:bg-ink-50">Limpar</button>
