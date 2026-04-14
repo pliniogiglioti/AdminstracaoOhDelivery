@@ -704,7 +704,7 @@ export async function createIndustrializedProduct(input: {
     brand: input.brand || null,
     description: input.description || null,
     ean: input.ean || null,
-    image_url: input.imageUrl || null,
+    image_url: input.imageUrl || 'https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/painel-vkbwb8/assets/dykp0g9ghdjn/error.png',
     active: input.active,
   })
   if (error) throw error
@@ -726,7 +726,7 @@ export async function updateIndustrializedProduct(
   if (input.brand !== undefined) payload.brand = input.brand || null
   if (input.description !== undefined) payload.description = input.description || null
   if (input.ean !== undefined) payload.ean = input.ean || null
-  if ('imageUrl' in input) payload.image_url = input.imageUrl || null
+  if ('imageUrl' in input) payload.image_url = input.imageUrl || 'https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/painel-vkbwb8/assets/dykp0g9ghdjn/error.png'
   if (input.active !== undefined) payload.active = input.active
 
   const { error } = await client().from('industrializados').update(payload).eq('id', id)
