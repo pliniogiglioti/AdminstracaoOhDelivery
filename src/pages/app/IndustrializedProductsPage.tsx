@@ -11,7 +11,7 @@ import {
 } from '@/services/admin'
 import type { IndustrializedProduct } from '@/types'
 
-const PAGE_SIZE = 10
+const DEFAULT_IMAGE = 'https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/painel-vkbwb8/assets/dykp0g9ghdjn/error.png'
 
 const emptyForm = {
   name: '',
@@ -88,13 +88,13 @@ export function IndustrializedProductsPage() {
       if (editingId !== null) {
         await updateIndustrializedProduct(editingId, {
           name: form.name, brand: form.brand, description: form.description,
-          ean: form.ean, imageUrl: form.imageUrl || null, active: form.active,
+          ean: form.ean, imageUrl: form.imageUrl || DEFAULT_IMAGE, active: form.active,
         })
         toast.success('Produto atualizado.')
       } else {
         await createIndustrializedProduct({
           name: form.name, brand: form.brand, description: form.description,
-          ean: form.ean, imageUrl: form.imageUrl || null, active: form.active,
+          ean: form.ean, imageUrl: form.imageUrl || DEFAULT_IMAGE, active: form.active,
         })
         toast.success('Produto criado.')
       }
