@@ -18,6 +18,7 @@ const emptyForm = {
   brand: '',
   description: '',
   ean: '',
+  imageUrl: '',
   active: true,
 }
 
@@ -68,6 +69,7 @@ export function IndustrializedProductsPage() {
       brand: p.brand ?? '',
       description: p.description ?? '',
       ean: p.ean ?? '',
+      imageUrl: p.imageUrl ?? '',
       active: p.active,
     })
     setModalOpen(true)
@@ -86,13 +88,13 @@ export function IndustrializedProductsPage() {
       if (editingId !== null) {
         await updateIndustrializedProduct(editingId, {
           name: form.name, brand: form.brand, description: form.description,
-          ean: form.ean, imageUrl: null, active: form.active,
+          ean: form.ean, imageUrl: form.imageUrl || null, active: form.active,
         })
         toast.success('Produto atualizado.')
       } else {
         await createIndustrializedProduct({
           name: form.name, brand: form.brand, description: form.description,
-          ean: form.ean, imageUrl: null, active: form.active,
+          ean: form.ean, imageUrl: form.imageUrl || null, active: form.active,
         })
         toast.success('Produto criado.')
       }
@@ -248,6 +250,13 @@ export function IndustrializedProductsPage() {
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Descricao</span>
             <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2}
               className="mt-1 w-full rounded-2xl border border-ink-100 px-3 py-2 text-sm outline-none focus:border-coral-300" />
+          </label>
+          <label className="block">
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">URL da Imagem</span>
+            <input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
+              className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
+              placeholder="https://..." />
+            {form.imageUrl ? <img src={form.imageUrl} alt="preview" className="mt-2 h-16 w-16 rounded-xl object-cover" /> : null}
           </label>
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Ativo</span>

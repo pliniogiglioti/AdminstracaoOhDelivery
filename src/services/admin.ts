@@ -680,7 +680,11 @@ export async function fetchIndustrializedProducts(search?: string, page = 0, pag
   query = query.range(page * pageSize, page * pageSize + pageSize - 1)
 
   const { data, error, count } = await query
-  if (error) throw error
+  if (error) {
+    // PGRST103: offset além do total de linhas — retorna vazio em vez de lançar
+    if (error.code === 'PGRST103') return { data: [], count: count ?? 0 }
+    throw error
+  }
   return {
     data: ((data ?? []) as IndustrializedProductRow[]).map(mapIndustrializedProduct),
     count: count ?? 0,
