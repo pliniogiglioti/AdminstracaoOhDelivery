@@ -672,11 +672,12 @@ export async function fetchIndustrializedProducts(search?: string, page = 0, pag
     .from('industrializados')
     .select('id,name,brand,description,ean,image_url,active,created_at', { count: 'exact' })
     .order('name', { ascending: true })
-    .range(page * pageSize, page * pageSize + pageSize - 1)
 
   if (search) {
     query = query.or(`name.ilike.%${search}%,ean.ilike.%${search}%,brand.ilike.%${search}%`)
   }
+
+  query = query.range(page * pageSize, page * pageSize + pageSize - 1)
 
   const { data, error, count } = await query
   if (error) throw error

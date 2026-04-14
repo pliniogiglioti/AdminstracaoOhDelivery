@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { ChevronLeft, ChevronRight, Plus, Search, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/admin/AdminUi'
 import { AnimatedModal } from '@/components/admin/AnimatedModal'
 import {
@@ -18,29 +18,7 @@ const emptyForm = {
   brand: '',
   description: '',
   ean: '',
-  imageUrl: '',
   active: true,
-}
-
-interface FoodResult {
-  code: string
-  name: string
-  brand: string
-  description: string
-  imageUrl: string
-}
-
-async function searchCosmos(query: string): Promise<FoodResult[]> {
-  const base = import.meta.env.VITE_SUPABASE_URL as string
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-  const param = /^\d+$/.test(query.trim()) ? `ean=${encodeURIComponent(query.trim())}` : `q=${encodeURIComponent(query.trim())}`
-  const res = await fetch(`${base}/functions/v1/search-products?${param}`, {
-    headers: { apikey: key, Authorization: `Bearer ${key}` },
-  })
-  if (!res.ok) throw new Error(`Erro ${res.status}`)
-  const json = await res.json() as { products?: FoodResult[]; error?: string }
-  if (json.error) throw new Error(json.error)
-  return json.products ?? []
 }
 
 export function IndustrializedProductsPage() {
@@ -52,10 +30,6 @@ export function IndustrializedProductsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [lookingUp, setLookingUp] = useState(false)
-  const [lookupQuery, setLookupQuery] = useState('')
-  const [lookupResults, setLookupResults] = useState<FoodResult[]>([])
-  const [registering, setRegistering] = useState<string | null>(null) // code do produto sendo cadastrado
   const [search, setSearch] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<IndustrializedProduct | null>(null)
 
@@ -84,9 +58,6 @@ export function IndustrializedProductsPage() {
   function openCreate() {
     setEditingId(null)
     setForm(emptyForm)
-    setLookupQuery('')
-    setLookupResults([])
-    setRegistering(null)
     setModalOpen(true)
   }
 
@@ -97,12 +68,8 @@ export function IndustrializedProductsPage() {
       brand: p.brand ?? '',
       description: p.description ?? '',
       ean: p.ean ?? '',
-      imageUrl: p.imageUrl ?? '',
       active: p.active,
     })
-    setLookupQuery('')
-    setLookupResults([])
-    setRegistering(null)
     setModalOpen(true)
   }
 
@@ -110,58 +77,6 @@ export function IndustrializedProductsPage() {
     setModalOpen(false)
     setEditingId(null)
     setForm(emptyForm)
-    setLookupQuery('')
-    setLookupResults([])
-    setRegistering(null)
-  }
-
-  function applyResult(r: FoodResult) {
-    setForm((f) => ({
-      ...f,
-      ean: r.code || f.ean,
-      name: r.name || f.name,
-      brand: r.brand || f.brand,
-      description: r.description || f.description,
-      imageUrl: r.imageUrl || f.imageUrl,
-    }))
-    setLookupResults([])
-    setLookupQuery('')
-  }
-
-  async function handleLookup() {
-    const q = lookupQuery.trim()
-    if (!q) { toast.error('Digite um EAN ou nome para buscar.'); return }
-    setLookingUp(true)
-    try {
-      const results = await searchCosmos(q)
-      if (results.length === 0) { toast.error('Nenhum produto encontrado.'); return }
-      setLookupResults(results)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erro na busca.')
-    } finally {
-      setLookingUp(false)
-    }
-  }
-
-  async function registerFromResult(r: FoodResult) {
-    setRegistering(r.code)
-    try {
-      await createIndustrializedProduct({
-        name: r.name,
-        brand: r.brand,
-        description: r.description,
-        ean: r.code,
-        imageUrl: r.imageUrl || null,
-        active: true,
-      })
-      toast.success(`"${r.name}" cadastrado!`)
-      await load(search || undefined, page)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : ''
-      toast.error(msg.includes('duplicate') || msg.includes('unique') ? 'EAN ja cadastrado.' : msg || 'Erro ao cadastrar.')
-    } finally {
-      setRegistering(null)
-    }
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -171,13 +86,13 @@ export function IndustrializedProductsPage() {
       if (editingId !== null) {
         await updateIndustrializedProduct(editingId, {
           name: form.name, brand: form.brand, description: form.description,
-          ean: form.ean, imageUrl: form.imageUrl || null, active: form.active,
+          ean: form.ean, imageUrl: null, active: form.active,
         })
         toast.success('Produto atualizado.')
       } else {
         await createIndustrializedProduct({
           name: form.name, brand: form.brand, description: form.description,
-          ean: form.ean, imageUrl: form.imageUrl || null, active: form.active,
+          ean: form.ean, imageUrl: null, active: form.active,
         })
         toast.success('Produto criado.')
       }
@@ -309,105 +224,48 @@ export function IndustrializedProductsPage() {
       </div>
 
       {/* Modal criar/editar */}
-      <AnimatedModal open={modalOpen} onClose={closeModal} title={editingId !== null ? 'Editar Produto' : 'Novo Produto'} className="!max-w-5xl w-[90vw] max-h-[90vh] overflow-y-auto">
-        <div className="grid grid-cols-2 gap-6">
-
-          {/* Coluna esquerda: busca */}
-          <div className="space-y-3">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Buscar via Cosmos (EAN ou nome)</p>
-            <div className="flex gap-2">
-              <input
-                value={lookupQuery}
-                onChange={(e) => setLookupQuery(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleLookup() } }}
-                className="h-10 flex-1 rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-                placeholder="Coca-Cola ou 7894900011517"
-              />
-              <button type="button" onClick={() => void handleLookup()} disabled={lookingUp}
-                className="inline-flex h-10 items-center gap-1 rounded-2xl bg-ink-900 px-3 text-sm font-bold text-white hover:bg-ink-700 disabled:opacity-60">
-                {lookingUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              </button>
-            </div>
-            <p className="text-xs text-ink-400">Clique em Cadastrar em cada produto para adicionar sem fechar o modal.</p>
-
-            <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
-              {lookupResults.length === 0 && !lookingUp && (
-                <p className="py-8 text-center text-sm text-ink-400">Busque um produto para ver os resultados.</p>
-              )}
-              {lookupResults.map((r) => (
-                <div key={r.code} className="flex items-center gap-3 rounded-2xl border border-ink-100 p-2">
-                  {r.imageUrl
-                    ? <img src={r.imageUrl} alt={r.name} className="h-12 w-12 shrink-0 rounded-xl object-cover" />
-                    : <div className="h-12 w-12 shrink-0 rounded-xl bg-ink-100" />}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-ink-900">{r.name}</p>
-                    <p className="truncate text-xs text-ink-500">{r.brand}</p>
-                    <p className="truncate text-xs font-mono text-ink-400">{r.code}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void registerFromResult(r)}
-                    disabled={registering === r.code}
-                    className="shrink-0 rounded-2xl bg-coral-500 px-3 py-2 text-xs font-bold text-white hover:bg-coral-600 disabled:opacity-60"
-                  >
-                    {registering === r.code ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Cadastrar'}
-                  </button>
-                </div>
-              ))}
-            </div>
+      <AnimatedModal open={modalOpen} onClose={closeModal} title={editingId !== null ? 'Editar Produto' : 'Novo Produto'}>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <label className="block">
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">EAN</span>
+            <input value={form.ean} onChange={(e) => setForm((f) => ({ ...f, ean: e.target.value }))}
+              className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
+              placeholder="7894900011517" />
+          </label>
+          <label className="block">
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Nome *</span>
+            <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required
+              className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
+              placeholder="Coca-Cola Lata 350ml" />
+          </label>
+          <label className="block">
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Marca</span>
+            <input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))}
+              className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
+              placeholder="Coca-Cola" />
+          </label>
+          <label className="block">
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Descricao</span>
+            <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2}
+              className="mt-1 w-full rounded-2xl border border-ink-100 px-3 py-2 text-sm outline-none focus:border-coral-300" />
+          </label>
+          <label className="block">
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Ativo</span>
+            <select value={form.active ? 'true' : 'false'} onChange={(e) => setForm((f) => ({ ...f, active: e.target.value === 'true' }))}
+              className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300">
+              <option value="true">Sim</option>
+              <option value="false">Nao</option>
+            </select>
+          </label>
+          <div className="flex justify-end gap-3 pt-1">
+            <button type="button" onClick={closeModal}
+              className="h-11 rounded-2xl border border-ink-100 px-5 text-sm font-semibold text-ink-700 hover:bg-ink-50">Cancelar</button>
+            <button type="submit" disabled={saving}
+              className="h-11 rounded-2xl bg-coral-500 px-5 text-sm font-bold text-white hover:bg-coral-600 disabled:opacity-60">
+              {saving ? 'Salvando...' : editingId !== null ? 'Salvar' : 'Cadastrar'}
+            </button>
           </div>
-
-          {/* Coluna direita: formulário */}
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <label className="block">
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">EAN</span>
-              <input value={form.ean} onChange={(e) => setForm((f) => ({ ...f, ean: e.target.value }))}
-                className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-                placeholder="7894900011517" />
-            </label>
-            <label className="block">
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Nome *</span>
-              <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required
-                className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-                placeholder="Coca-Cola Lata 350ml" />
-            </label>
-            <label className="block">
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Marca</span>
-              <input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))}
-                className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-                placeholder="Coca-Cola" />
-            </label>
-            <label className="block">
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Descricao</span>
-              <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2}
-                className="mt-1 w-full rounded-2xl border border-ink-100 px-3 py-2 text-sm outline-none focus:border-coral-300" />
-            </label>
-            <label className="block">
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">URL da Imagem</span>
-              <input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
-                className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300"
-                placeholder="https://..." />
-              {form.imageUrl ? <img src={form.imageUrl} alt="preview" className="mt-2 h-16 w-16 rounded-xl object-cover" /> : null}
-            </label>
-            <label className="block">
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Ativo</span>
-              <select value={form.active ? 'true' : 'false'} onChange={(e) => setForm((f) => ({ ...f, active: e.target.value === 'true' }))}
-                className="mt-1 h-11 w-full rounded-2xl border border-ink-100 px-3 text-sm outline-none focus:border-coral-300">
-                <option value="true">Sim</option>
-                <option value="false">Nao</option>
-              </select>
-            </label>
-            <div className="flex justify-end gap-3 pt-1">
-              <button type="button" onClick={closeModal}
-                className="h-11 rounded-2xl border border-ink-100 px-5 text-sm font-semibold text-ink-700 hover:bg-ink-50">Cancelar</button>
-              <button type="submit" disabled={saving}
-                className="h-11 rounded-2xl bg-coral-500 px-5 text-sm font-bold text-white hover:bg-coral-600 disabled:opacity-60">
-                {saving ? 'Salvando...' : editingId !== null ? 'Salvar' : 'Cadastrar'}
-              </button>
-            </div>
-          </form>
-
-        </div>
+        </form>
       </AnimatedModal>
 
       {/* Modal delete */}
