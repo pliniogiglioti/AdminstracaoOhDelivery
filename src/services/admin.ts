@@ -339,9 +339,11 @@ export async function fetchSupportTickets(filters?: {
   status?: SupportTicketStatus | 'todos'
   category?: string
 }): Promise<SupportTicket[]> {
-  let query = client()
+  const supabaseClient = client()
+
+  let query = supabaseClient
     .from('support_tickets')
-    .select('id,store_id,stores(name),protocol,title,category,description,status,created_at,updated_at')
+    .select('id,store_id,protocol,title,category,description,status,created_at,updated_at')
     .order('created_at', { ascending: false })
     .limit(300)
 
@@ -356,7 +358,38 @@ export async function fetchSupportTickets(filters?: {
   const { data, error } = await query
   if (error) throw error
 
-  return ((data ?? []) as SupportTicketRow[]).map(mapSupportTicket)
+  const tickets = (data ?? []) as Array<{
+    id: string; store_id: string; protocol: string; title: string
+    category: string; description: string; status: string
+    created_at: string; updated_at: string
+  }>
+
+  // busca nomes das lojas em batch
+  const storeIds = [...new Set(tickets.map((t) => t.store_id).filter(Boolean))]
+  const storeNameMap = new Map<string, string>()
+
+  if (storeIds.length > 0) {
+    const { data: storesData } = await supabaseClient
+      .from('stores')
+      .select('id,name')
+      .in('id', storeIds)
+    for (const s of (storesData ?? []) as Array<{ id: string; name: string }>) {
+      storeNameMap.set(s.id, s.name)
+    }
+  }
+
+  return tickets.map((row) => ({
+    id: row.id,
+    storeId: row.store_id,
+    storeName: storeNameMap.get(row.store_id) ?? null,
+    protocol: row.protocol,
+    title: row.title,
+    category: row.category as SupportTicket['category'],
+    description: row.description,
+    status: row.status as SupportTicketStatus,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }))
 }
 
 export async function updateSupportTicketStatus(id: string, status: SupportTicketStatus) {
