@@ -1,6 +1,6 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, MoreVertical, Plus, Search } from 'lucide-react'
 import { PageHeader } from '@/components/admin/AdminUi'
 import { AnimatedModal } from '@/components/admin/AnimatedModal'
 import {
@@ -22,6 +22,40 @@ const emptyForm = {
   ean: '',
   imageUrl: '',
   active: true,
+}
+
+function ProductMenu({ product, onEdit, onDelete }: {
+  product: IndustrializedProduct
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" onClick={() => setOpen((v) => !v)}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-ink-500 hover:bg-ink-50">
+        <MoreVertical className="h-4 w-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-9 z-20 min-w-[130px] rounded-2xl border border-ink-100 bg-white py-1 shadow-lg">
+          <button type="button" onClick={() => { onEdit(); setOpen(false) }}
+            className="w-full px-4 py-2 text-left text-sm text-ink-700 hover:bg-ink-50">Editar</button>
+          <button type="button" onClick={() => { onDelete(); setOpen(false) }}
+            className="w-full px-4 py-2 text-left text-sm text-coral-600 hover:bg-coral-50">Remover</button>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function IndustrializedProductsPage() {
@@ -185,13 +219,12 @@ export function IndustrializedProductsPage() {
                       {p.active ? 'Ativo' : 'Inativo'}
                     </button>
                   </td>
-                  <td className="px-4 py-4">
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => openEdit(p)}
-                        className="rounded-2xl border border-ink-100 px-3 py-2 text-xs font-bold text-ink-700 hover:bg-ink-50">Editar</button>
-                      <button type="button" onClick={() => setConfirmDelete(p)}
-                        className="rounded-2xl bg-coral-50 px-3 py-2 text-xs font-bold text-coral-700 hover:bg-coral-100">Remover</button>
-                    </div>
+                  <td className="px-4 py-4 text-right">
+                    <ProductMenu
+                      product={p}
+                      onEdit={() => openEdit(p)}
+                      onDelete={() => setConfirmDelete(p)}
+                    />
                   </td>
                 </tr>
               ))}

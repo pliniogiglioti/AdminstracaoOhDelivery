@@ -192,7 +192,7 @@ export function SupportPage() {
                     {ticket.title}
                   </p>
                   <p className="mt-1 text-xs text-ink-500">
-                    #{ticket.protocol} &middot; {ticket.storeName ?? ticket.storeId}
+                    #{ticket.protocol} &middot; {ticket.storeName ?? `Loja ${ticket.storeId.slice(0, 8)}`}
                   </p>
                 </div>
                 <span
@@ -230,7 +230,7 @@ export function SupportPage() {
             <div>
               <p className="font-display text-lg font-bold text-ink-900">{selected.title}</p>
               <p className="mt-1 text-sm text-ink-500">
-                {selected.storeName ?? selected.storeId} &middot; {CATEGORY_LABELS[selected.category]}
+                {selected.storeName ?? `Loja ${selected.storeId.slice(0, 8)}`} &middot; {CATEGORY_LABELS[selected.category]}
               </p>
             </div>
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { PageHeader } from '@/components/admin/AdminUi'
 import { formatCurrency } from '@/lib/utils'
 import { fetchFinancialOrders, fetchStoreOptions } from '@/services/admin'
@@ -7,11 +8,15 @@ import type { AdminOrder, StoreOption } from '@/types'
 
 type Tab = 'faturamento' | 'repasse'
 
+const REPASSE_PERCENTUAL = 0.85 // 85% para o parceiro, 15% plataforma
+const PAGE_SIZE = 10
+
 interface StoreSummary {
   storeId: string
   storeName: string
   count: number
   total: number
+  repasse: number
 }
 
 function isoDate(date: Date) {
@@ -45,6 +50,7 @@ export function FinancialPage() {
   const [loading, setLoading] = useState(true)
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [stores, setStores] = useState<StoreOption[]>([])
+  const [page, setPage] = useState(0)
 
   async function load() {
     setLoading(true)
@@ -60,6 +66,7 @@ export function FinancialPage() {
       ])
       setOrders(nextOrders)
       setStores(nextStores)
+      setPage(0)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar dados financeiros.')
     } finally {
@@ -80,18 +87,29 @@ export function FinancialPage() {
       if (existing) {
         existing.count += 1
         existing.total += order.totalAmount
+        existing.repasse += order.totalAmount * REPASSE_PERCENTUAL
       } else {
-        map.set(id, { storeId: id, storeName: name, count: 1, total: order.totalAmount })
+        map.set(id, {
+          storeId: id,
+          storeName: name,
+          count: 1,
+          total: order.totalAmount,
+          repasse: order.totalAmount * REPASSE_PERCENTUAL,
+        })
       }
     }
     return Array.from(map.values()).sort((a, b) => b.total - a.total)
   }, [orders])
 
+  const totalPages = Math.ceil(summary.length / PAGE_SIZE)
+  const pagedSummary = summary.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
+
   const totalAmount = useMemo(() => orders.reduce((acc, o) => acc + o.totalAmount, 0), [orders])
   const totalCount = orders.length
   const avgTicket = totalCount > 0 ? totalAmount / totalCount : 0
+  const totalRepasse = totalAmount * REPASSE_PERCENTUAL
 
-  const colLabel = tab === 'faturamento' ? 'Faturamento' : 'Repasse'
+  const colLabel = tab === 'faturamento' ? 'Faturamento' : 'Repasse (85%)'
 
   const activePreset = presets.find((p) => p.from === dateFrom && p.to === dateTo)
 
@@ -194,7 +212,7 @@ export function FinancialPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-4">
         <div className="panel-card p-5">
           <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Pedidos</p>
           <p className="mt-2 font-display text-3xl font-bold text-ink-900">
@@ -202,9 +220,15 @@ export function FinancialPage() {
           </p>
         </div>
         <div className="panel-card p-5">
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">{colLabel} total</p>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Faturamento total</p>
           <p className="mt-2 font-display text-3xl font-bold text-ink-900">
             {loading ? <span className="inline-block h-8 w-28 animate-pulse rounded-full bg-ink-100" /> : formatCurrency(totalAmount)}
+          </p>
+        </div>
+        <div className="panel-card p-5">
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Repasse total (85%)</p>
+          <p className="mt-2 font-display text-3xl font-bold text-mint-700">
+            {loading ? <span className="inline-block h-8 w-28 animate-pulse rounded-full bg-ink-100" /> : formatCurrency(totalRepasse)}
           </p>
         </div>
         <div className="panel-card p-5">
@@ -222,7 +246,8 @@ export function FinancialPage() {
               <tr>
                 <th className="px-4 py-4">Loja</th>
                 <th className="px-4 py-4">Pedidos</th>
-                <th className="px-4 py-4">{colLabel}</th>
+                <th className="px-4 py-4">Faturamento</th>
+                <th className="px-4 py-4">Repasse (85%)</th>
                 <th className="px-4 py-4">Ticket médio</th>
               </tr>
             </thead>
@@ -233,21 +258,23 @@ export function FinancialPage() {
                     <td className="px-4 py-4"><div className="h-4 w-36 rounded-full bg-ink-100" /></td>
                     <td className="px-4 py-4"><div className="h-4 w-10 rounded-full bg-ink-100" /></td>
                     <td className="px-4 py-4"><div className="h-4 w-24 rounded-full bg-ink-100" /></td>
+                    <td className="px-4 py-4"><div className="h-4 w-24 rounded-full bg-ink-100" /></td>
                     <td className="px-4 py-4"><div className="h-4 w-20 rounded-full bg-ink-100" /></td>
                   </tr>
                 ))
-              ) : summary.length === 0 ? (
+              ) : pagedSummary.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-ink-500">
+                  <td colSpan={5} className="px-4 py-6 text-center text-ink-500">
                     Nenhum dado encontrado para o periodo selecionado.
                   </td>
                 </tr>
               ) : (
-                summary.map((row) => (
+                pagedSummary.map((row) => (
                   <tr key={row.storeId}>
                     <td className="px-4 py-4 font-semibold text-ink-900">{row.storeName}</td>
                     <td className="px-4 py-4 text-ink-700">{row.count}</td>
                     <td className="px-4 py-4 font-semibold text-ink-900">{formatCurrency(row.total)}</td>
+                    <td className="px-4 py-4 font-semibold text-mint-700">{formatCurrency(row.repasse)}</td>
                     <td className="px-4 py-4 text-ink-700">{formatCurrency(row.total / row.count)}</td>
                   </tr>
                 ))
@@ -255,6 +282,32 @@ export function FinancialPage() {
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-ink-100 px-4 py-3">
+            <p className="text-sm text-ink-500">
+              {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, summary.length)} de {summary.length} lojas
+            </p>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={() => setPage((p) => p - 1)} disabled={page === 0}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-ink-100 text-ink-700 hover:bg-ink-50 disabled:opacity-40">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i).map((i) => (
+                <button key={i} type="button" onClick={() => setPage(i)}
+                  className={i === page
+                    ? 'inline-flex h-9 w-9 items-center justify-center rounded-xl bg-coral-500 text-sm font-bold text-white'
+                    : 'inline-flex h-9 w-9 items-center justify-center rounded-xl border border-ink-100 text-sm text-ink-700 hover:bg-ink-50'}>
+                  {i + 1}
+                </button>
+              ))}
+              <button type="button" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages - 1}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-ink-100 text-ink-700 hover:bg-ink-50 disabled:opacity-40">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
