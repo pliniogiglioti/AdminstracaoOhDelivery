@@ -43,6 +43,7 @@ interface StoreRow {
   address_zip: string | null
   created_at: string
   updated_at: string | null
+  repasse_percentual?: number | null
 }
 
 interface CategoryRow {
@@ -106,6 +107,7 @@ function mapStore(row: StoreRow): AdminStore {
     addressZip: row.address_zip,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    repassePercentual: row.repasse_percentual ?? null,
   }
 }
 
@@ -138,7 +140,7 @@ const storeSelect = `
   id,name,category_id,category_name,partner_email,partner_name,
   registration_status,rejection_reason,is_open,active,delivery_fee,eta_min,eta_max,
   address_street,address_neighborhood,address_city,address_state,address_zip,
-  created_at,updated_at
+  created_at,updated_at,repasse_percentual
 `
 
 export async function fetchDashboardMetrics(): Promise<DashboardMetrics> {

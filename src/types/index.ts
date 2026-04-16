@@ -55,6 +55,7 @@ export interface AdminStore {
   addressZip: string | null
   createdAt: string
   updatedAt: string | null
+  repassePercentual: number | null
 }
 
 export interface StoreCategory {

@@ -3,12 +3,9 @@ import toast from 'react-hot-toast'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { PageHeader } from '@/components/admin/AdminUi'
 import { formatCurrency } from '@/lib/utils'
-import { fetchFinancialOrders, fetchStoreOptions } from '@/services/admin'
+import { fetchFinancialOrders, fetchStoreOptions, fetchStores } from '@/services/admin'
 import type { AdminOrder, StoreOption } from '@/types'
 
-type Tab = 'faturamento' | 'repasse'
-
-const REPASSE_PERCENTUAL = 0.85 // 85% para o parceiro, 15% plataforma
 const PAGE_SIZE = 10
 
 interface StoreSummary {
@@ -17,6 +14,7 @@ interface StoreSummary {
   count: number
   total: number
   repasse: number
+  repassePercentual: number
 }
 
 function isoDate(date: Date) {
@@ -41,7 +39,6 @@ function getPresets() {
 export function FinancialPage() {
   const presets = useMemo(() => getPresets(), [])
 
-  const [tab, setTab] = useState<Tab>('faturamento')
   const [dateFrom, setDateFrom] = useState(presets[3].from)
   const [dateTo, setDateTo] = useState(presets[3].to)
   const [storeId, setStoreId] = useState('')
@@ -50,12 +47,13 @@ export function FinancialPage() {
   const [loading, setLoading] = useState(true)
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [stores, setStores] = useState<StoreOption[]>([])
+  const [repasseMap, setRepasseMap] = useState<Map<string, number>>(new Map())
   const [page, setPage] = useState(0)
 
   async function load() {
     setLoading(true)
     try {
-      const [nextOrders, nextStores] = await Promise.all([
+      const [nextOrders, nextStores, allStores] = await Promise.all([
         fetchFinancialOrders({
           dateFrom,
           dateTo,
@@ -63,9 +61,18 @@ export function FinancialPage() {
           status: status !== 'todos' ? status : undefined,
         }),
         stores.length ? Promise.resolve(stores) : fetchStoreOptions(),
+        fetchStores(),
       ])
       setOrders(nextOrders)
       setStores(nextStores)
+      // monta mapa storeId -> repasse_percentual
+      const map = new Map<string, number>()
+      for (const s of allStores) {
+        // repasse_percentual vem como número ou null
+        const pct = (s as unknown as { repassePercentual?: number | null }).repassePercentual
+        map.set(s.id, typeof pct === 'number' ? pct : 5)
+      }
+      setRepasseMap(map)
       setPage(0)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar dados financeiros.')
@@ -74,32 +81,26 @@ export function FinancialPage() {
     }
   }
 
-  useEffect(() => {
-    void load()
-  }, [dateFrom, dateTo, storeId, status])
+  useEffect(() => { void load() }, [dateFrom, dateTo, storeId, status])
 
   const summary = useMemo<StoreSummary[]>(() => {
     const map = new Map<string, StoreSummary>()
     for (const order of orders) {
       const id = order.storeId ?? 'desconhecida'
       const name = order.storeName ?? 'Loja desconhecida'
+      const pct = repasseMap.get(id) ?? 5
+      const repasseValor = order.totalAmount * (pct / 100)
       const existing = map.get(id)
       if (existing) {
         existing.count += 1
         existing.total += order.totalAmount
-        existing.repasse += order.totalAmount * REPASSE_PERCENTUAL
+        existing.repasse += repasseValor
       } else {
-        map.set(id, {
-          storeId: id,
-          storeName: name,
-          count: 1,
-          total: order.totalAmount,
-          repasse: order.totalAmount * REPASSE_PERCENTUAL,
-        })
+        map.set(id, { storeId: id, storeName: name, count: 1, total: order.totalAmount, repasse: repasseValor, repassePercentual: pct })
       }
     }
     return Array.from(map.values()).sort((a, b) => b.total - a.total)
-  }, [orders])
+  }, [orders, repasseMap])
 
   const totalPages = Math.ceil(summary.length / PAGE_SIZE)
   const pagedSummary = summary.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
@@ -107,9 +108,7 @@ export function FinancialPage() {
   const totalAmount = useMemo(() => orders.reduce((acc, o) => acc + o.totalAmount, 0), [orders])
   const totalCount = orders.length
   const avgTicket = totalCount > 0 ? totalAmount / totalCount : 0
-  const totalRepasse = totalAmount * REPASSE_PERCENTUAL
-
-  const colLabel = tab === 'faturamento' ? 'Faturamento' : 'Repasse (85%)'
+  const totalRepasse = useMemo(() => summary.reduce((acc, s) => acc + s.repasse, 0), [summary])
 
   const activePreset = presets.find((p) => p.from === dateFrom && p.to === dateTo)
 
@@ -117,36 +116,14 @@ export function FinancialPage() {
     <div className="space-y-5">
       <PageHeader title="Financeiro" description="Acompanhe faturamento e repasse por periodo e loja." />
 
-      <div className="flex gap-2">
-        {(['faturamento', 'repasse'] as Tab[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTab(t)}
-            className={
-              tab === t
-                ? 'rounded-2xl bg-ink-900 px-5 py-2.5 text-sm font-bold text-white'
-                : 'rounded-2xl border border-ink-100 px-5 py-2.5 text-sm font-semibold text-ink-700 hover:bg-ink-50'
-            }
-          >
-            {t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </div>
-
       <div className="panel-card space-y-4 p-4">
         <div className="flex flex-wrap gap-2">
           {presets.map((preset) => (
-            <button
-              key={preset.label}
-              type="button"
+            <button key={preset.label} type="button"
               onClick={() => { setDateFrom(preset.from); setDateTo(preset.to) }}
-              className={
-                activePreset?.label === preset.label
-                  ? 'rounded-2xl bg-coral-500 px-4 py-2 text-xs font-bold text-white'
-                  : 'rounded-2xl border border-ink-100 px-4 py-2 text-xs font-semibold text-ink-700 hover:bg-ink-50'
-              }
-            >
+              className={activePreset?.label === preset.label
+                ? 'rounded-2xl bg-coral-500 px-4 py-2 text-xs font-bold text-white'
+                : 'rounded-2xl border border-ink-100 px-4 py-2 text-xs font-semibold text-ink-700 hover:bg-ink-50'}>
               {preset.label}
             </button>
           ))}
@@ -155,26 +132,17 @@ export function FinancialPage() {
         <div className="grid gap-4 md:grid-cols-[1fr_1fr_1fr_180px_auto]">
           <label>
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">De</span>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 bg-white px-3 text-sm outline-none focus:border-coral-300"
-            />
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 bg-white px-3 text-sm outline-none focus:border-coral-300" />
           </label>
           <label>
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Até</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 bg-white px-3 text-sm outline-none focus:border-coral-300"
-            />
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 bg-white px-3 text-sm outline-none focus:border-coral-300" />
           </label>
           <label>
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Loja</span>
-            <input
-              list="financial-stores"
+            <input list="financial-stores"
               value={stores.find((s) => s.id === storeId)?.name ?? storeFilter}
               onChange={(e) => {
                 setStoreFilter(e.target.value)
@@ -182,31 +150,22 @@ export function FinancialPage() {
                 setStoreId(match ? match.id : '')
               }}
               placeholder="Todas as lojas"
-              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 bg-white px-3 text-sm outline-none focus:border-coral-300"
-            />
+              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 bg-white px-3 text-sm outline-none focus:border-coral-300" />
             <datalist id="financial-stores">
-              {stores.map((s) => (
-                <option key={s.id} value={s.name} />
-              ))}
+              {stores.map((s) => <option key={s.id} value={s.name} />)}
             </datalist>
           </label>
           <label>
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Status</span>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 bg-white px-3 text-sm outline-none focus:border-coral-300"
-            >
+            <select value={status} onChange={(e) => setStatus(e.target.value)}
+              className="mt-2 h-11 w-full rounded-2xl border border-ink-100 bg-white px-3 text-sm outline-none focus:border-coral-300">
               <option value="entregue">entregue</option>
               <option value="cancelado">cancelado</option>
               <option value="todos">todos</option>
             </select>
           </label>
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="self-end rounded-2xl bg-ink-900 px-5 py-3 text-sm font-bold text-white hover:bg-ink-800"
-          >
+          <button type="button" onClick={() => void load()}
+            className="self-end rounded-2xl bg-ink-900 px-5 py-3 text-sm font-bold text-white hover:bg-ink-800">
             Atualizar
           </button>
         </div>
@@ -226,7 +185,7 @@ export function FinancialPage() {
           </p>
         </div>
         <div className="panel-card p-5">
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Repasse total (85%)</p>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-400">Repasse total</p>
           <p className="mt-2 font-display text-3xl font-bold text-mint-700">
             {loading ? <span className="inline-block h-8 w-28 animate-pulse rounded-full bg-ink-100" /> : formatCurrency(totalRepasse)}
           </p>
@@ -247,7 +206,8 @@ export function FinancialPage() {
                 <th className="px-4 py-4">Loja</th>
                 <th className="px-4 py-4">Pedidos</th>
                 <th className="px-4 py-4">Faturamento</th>
-                <th className="px-4 py-4">Repasse (85%)</th>
+                <th className="px-4 py-4">% Repasse</th>
+                <th className="px-4 py-4">Repasse</th>
                 <th className="px-4 py-4">Ticket médio</th>
               </tr>
             </thead>
@@ -255,30 +215,27 @@ export function FinancialPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="px-4 py-4"><div className="h-4 w-36 rounded-full bg-ink-100" /></td>
-                    <td className="px-4 py-4"><div className="h-4 w-10 rounded-full bg-ink-100" /></td>
-                    <td className="px-4 py-4"><div className="h-4 w-24 rounded-full bg-ink-100" /></td>
-                    <td className="px-4 py-4"><div className="h-4 w-24 rounded-full bg-ink-100" /></td>
-                    <td className="px-4 py-4"><div className="h-4 w-20 rounded-full bg-ink-100" /></td>
+                    {Array.from({ length: 6 }).map((__, j) => (
+                      <td key={j} className="px-4 py-4"><div className="h-4 w-24 rounded-full bg-ink-100" /></td>
+                    ))}
                   </tr>
                 ))
               ) : pagedSummary.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-ink-500">
+                  <td colSpan={6} className="px-4 py-6 text-center text-ink-500">
                     Nenhum dado encontrado para o periodo selecionado.
                   </td>
                 </tr>
-              ) : (
-                pagedSummary.map((row) => (
-                  <tr key={row.storeId}>
-                    <td className="px-4 py-4 font-semibold text-ink-900">{row.storeName}</td>
-                    <td className="px-4 py-4 text-ink-700">{row.count}</td>
-                    <td className="px-4 py-4 font-semibold text-ink-900">{formatCurrency(row.total)}</td>
-                    <td className="px-4 py-4 font-semibold text-mint-700">{formatCurrency(row.repasse)}</td>
-                    <td className="px-4 py-4 text-ink-700">{formatCurrency(row.total / row.count)}</td>
-                  </tr>
-                ))
-              )}
+              ) : pagedSummary.map((row) => (
+                <tr key={row.storeId}>
+                  <td className="px-4 py-4 font-semibold text-ink-900">{row.storeName}</td>
+                  <td className="px-4 py-4 text-ink-700">{row.count}</td>
+                  <td className="px-4 py-4 font-semibold text-ink-900">{formatCurrency(row.total)}</td>
+                  <td className="px-4 py-4 text-ink-500">{row.repassePercentual}%</td>
+                  <td className="px-4 py-4 font-semibold text-mint-700">{formatCurrency(row.repasse)}</td>
+                  <td className="px-4 py-4 text-ink-700">{formatCurrency(row.total / row.count)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
