@@ -21,6 +21,7 @@ interface NotificationTemplate {
   trigger_type: TriggerType
   title: string
   body: string
+  image_url: string | null
   active: boolean
 }
 
@@ -69,13 +70,14 @@ export function PushNotificationsPage() {
   const [stores, setStores] = useState<StoreOption[]>([])
   const [logs, setLogs] = useState<NotificationLog[]>([])
   const [sending, setSending] = useState(false)
+  const [imageUrl, setImageUrl] = useState('')
   const [loadingLogs, setLoadingLogs] = useState(true)
 
   // Templates
   const [templates, setTemplates] = useState<NotificationTemplate[]>([])
   const [loadingTemplates, setLoadingTemplates] = useState(true)
   const [savingTemplate, setSavingTemplate] = useState<string | null>(null)
-  const [editingTemplates, setEditingTemplates] = useState<Record<string, { title: string; body: string; active: boolean }>>({})
+  const [editingTemplates, setEditingTemplates] = useState<Record<string, { title: string; body: string; image_url: string; active: boolean }>>({})
 
   // Teste
   const [testing, setTesting] = useState(false)
@@ -113,9 +115,9 @@ export function PushNotificationsPage() {
     const loaded = (data ?? []) as NotificationTemplate[]
     setTemplates(loaded)
     // Inicializa estado de edição
-    const initial: Record<string, { title: string; body: string; active: boolean }> = {}
+    const initial: Record<string, { title: string; body: string; image_url: string; active: boolean }> = {}
     for (const t of loaded) {
-      initial[t.trigger_type] = { title: t.title, body: t.body, active: t.active }
+      initial[t.trigger_type] = { title: t.title, body: t.body, image_url: t.image_url ?? '', active: t.active }
     }
     setEditingTemplates(initial)
     setLoadingTemplates(false)
@@ -130,12 +132,12 @@ export function PushNotificationsPage() {
       if (existing) {
         await supabase!
           .from('push_notification_templates')
-          .update({ title: edit.title, body: edit.body, active: edit.active, updated_at: new Date().toISOString() })
+          .update({ title: edit.title, body: edit.body, image_url: edit.image_url || null, active: edit.active, updated_at: new Date().toISOString() })
           .eq('id', existing.id)
       } else {
         await supabase!
           .from('push_notification_templates')
-          .insert({ trigger_type: triggerType, title: edit.title, body: edit.body, active: edit.active })
+          .insert({ trigger_type: triggerType, title: edit.title, body: edit.body, image_url: edit.image_url || null, active: edit.active })
       }
       await loadTemplates()
     } finally {
@@ -169,7 +171,7 @@ export function PushNotificationsPage() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-          body: JSON.stringify({ title, body, target_type: targetType, target_id: targetId || null, trigger_type: triggerType }),
+          body: JSON.stringify({ title, body, target_type: targetType, target_id: targetId || null, trigger_type: triggerType, image_url: imageUrl || null }),
         }
       )
       const result = await res.json() as { sent_count?: number; error?: string }
@@ -177,6 +179,7 @@ export function PushNotificationsPage() {
       setTitle('')
       setBody('')
       setTargetId('')
+      setImageUrl('')
       await loadLogs()
       alert(`Notificação enviada para ${result.sent_count} usuário(s).`)
     } catch (err) {
@@ -514,6 +517,21 @@ export function PushNotificationsPage() {
                   placeholder="Ex: O restaurante já está preparando seu pedido." maxLength={200} rows={3}
                   className="w-full resize-none rounded-2xl border border-ink-100 bg-white px-4 py-3 text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-coral-300" />
                 <p className="mt-1 text-xs text-ink-400">Tags disponíveis: <code>{'{{cliente}}'}</code> <code>{'{{pedido}}'}</code> <code>{'{{loja}}'}</code></p>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-ink-700">
+                  Imagem <span className="font-normal text-ink-400">(opcional)</span>
+                </label>
+                <input type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://exemplo.com/imagem.jpg"
+                  className="w-full rounded-2xl border border-ink-100 bg-white px-4 py-3 text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-coral-300" />
+                {imageUrl && (
+                  <div className="mt-2 overflow-hidden rounded-2xl border border-ink-100">
+                    <img src={imageUrl} alt="Preview" className="h-32 w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                  </div>
+                )}
+                <p className="mt-1 text-xs text-ink-400">Aparece como imagem expandida na notificação no Android</p>
               </div>
 
               <button type="button" onClick={() => void handleSend()}
