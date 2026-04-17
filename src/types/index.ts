@@ -168,6 +168,7 @@ export interface AdminStoreBanner {
   imageUrl: string | null
   sortOrder: number
   active: boolean
+  context: 'home' | 'promos'
   createdAt: string
 }
 

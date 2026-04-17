@@ -615,6 +615,7 @@ export async function fetchStoreBanners(): Promise<AdminStoreBanner[]> {
     imageUrl: row.image_url ? String(row.image_url) : null,
     sortOrder: Number(row.sort_order ?? 0),
     active: Boolean(row.active),
+    context: (row.context === 'promos' ? 'promos' : 'home') as 'home' | 'promos',
     createdAt: String(row.created_at),
   }))
 }
@@ -628,6 +629,7 @@ export async function createStoreBanner(data: {
   storeSlug: string | null
   sortOrder: number
   active: boolean
+  context: 'home' | 'promos'
 }): Promise<void> {
   const { error } = await client().from('store_banners').insert({
     title: data.title,
@@ -638,6 +640,7 @@ export async function createStoreBanner(data: {
     store_slug: data.storeSlug,
     sort_order: data.sortOrder,
     active: data.active,
+    context: data.context,
   })
   if (error) throw error
 }
@@ -653,6 +656,7 @@ export async function updateStoreBanner(
     storeSlug: string | null
     sortOrder: number
     active: boolean
+    context: 'home' | 'promos'
   }
 ): Promise<void> {
   const { error } = await client()
@@ -666,6 +670,7 @@ export async function updateStoreBanner(
       store_slug: data.storeSlug,
       sort_order: data.sortOrder,
       active: data.active,
+      context: data.context,
     })
     .eq('id', id)
   if (error) throw error

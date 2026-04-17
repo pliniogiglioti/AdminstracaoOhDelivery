@@ -31,6 +31,7 @@ const EMPTY_BANNER: Omit<AdminStoreBanner, 'id' | 'createdAt'> = {
   imageUrl: '',
   sortOrder: 0,
   active: true,
+  context: 'home',
 }
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
@@ -381,6 +382,7 @@ function DestaquesTab() {
         storeSlug: data.storeSlug || null,
         sortOrder: data.sortOrder,
         active: data.active,
+        context: data.context,
       })
       toast.success('Destaque criado.')
     } else if (editingBanner) {
@@ -393,6 +395,7 @@ function DestaquesTab() {
         storeSlug: data.storeSlug || null,
         sortOrder: data.sortOrder,
         active: data.active,
+        context: data.context,
       })
       toast.success('Destaque atualizado.')
     }
@@ -471,6 +474,7 @@ function DestaquesTab() {
                     CTA: {b.ctaLabel}
                     {b.storeSlug ? ` · loja: ${b.storeSlug}` : ''}
                     {' · ordem: '}{b.sortOrder}
+                    {` · ${b.context === 'promos' ? 'Promos!' : 'Home'}`}
                   </p>
                 </div>
 
@@ -560,6 +564,7 @@ function BannerModal({
               imageUrl: banner.imageUrl ?? '',
               sortOrder: banner.sortOrder,
               active: banner.active,
+              context: banner.context,
             }
           : { ...EMPTY_BANNER }
       )
@@ -579,6 +584,7 @@ function BannerModal({
         imageUrl: form.imageUrl || null,
         sortOrder: form.sortOrder,
         active: form.active,
+        context: form.context,
       })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao salvar destaque.')
@@ -651,6 +657,16 @@ function BannerModal({
             className="input-field"
             placeholder="https://..."
           />
+        </Field>
+        <Field label="Pagina">
+          <select
+            value={form.context}
+            onChange={(e) => setForm((f) => ({ ...f, context: e.target.value as 'home' | 'promos' }))}
+            className="input-field"
+          >
+            <option value="home">Home</option>
+            <option value="promos">Promos!</option>
+          </select>
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Ordem">
