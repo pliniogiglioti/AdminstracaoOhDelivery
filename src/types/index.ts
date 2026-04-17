@@ -142,6 +142,7 @@ export type AdminSection =
   | 'access_control'
   | 'home_content'
   | 'produtos_industrializados'
+  | 'push_notifications'
 
 export interface AdminHomeHighlight {
   id: string

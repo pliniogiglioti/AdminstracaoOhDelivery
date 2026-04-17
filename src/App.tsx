@@ -9,6 +9,7 @@ import { HomeContentPage } from '@/pages/app/HomeContentPage'
 import { IndustrializedProductsPage } from '@/pages/app/IndustrializedProductsPage'
 import { OrdersPage } from '@/pages/app/OrdersPage'
 import { PartnersPage } from '@/pages/app/PartnersPage'
+import { PushNotificationsPage } from '@/pages/app/PushNotificationsPage'
 import { StoresPage } from '@/pages/app/StoresPage'
 import { SupportPage } from '@/pages/app/SupportPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -30,6 +31,7 @@ export function App() {
           <Route path="controle-de-acesso" element={<AccessControlPage />} />
           <Route path="home-content" element={<HomeContentPage />} />
           <Route path="produtos-industrializados" element={<IndustrializedProductsPage />} />
+          <Route path="push-notifications" element={<PushNotificationsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

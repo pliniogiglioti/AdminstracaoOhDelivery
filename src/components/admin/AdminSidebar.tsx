@@ -9,6 +9,7 @@ import {
   LayoutTemplate,
   LogOut,
   Package,
+  Bell,
   ShieldCheck,
   Store,
   Tags,
@@ -36,6 +37,7 @@ const navItems: Array<{ id: AdminSection; label: string; icon: LucideIcon; to: s
   { id: 'access_control', label: 'Controle de Acesso', icon: KeyRound, to: '/app/controle-de-acesso' },
   { id: 'home_content', label: 'Conteudo da Home', icon: LayoutTemplate, to: '/app/home-content' },
   { id: 'produtos_industrializados', label: 'Produtos Industrializados', icon: Package, to: '/app/produtos-industrializados' },
+  { id: 'push_notifications', label: 'Push Notifications', icon: Bell, to: '/app/push-notifications' },
 ]
 
 function navBadgeCount(id: AdminSection, counts: SidebarCounts): number {
