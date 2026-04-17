@@ -221,7 +221,7 @@ export function PushNotificationsPage() {
     <div className="space-y-6">
 
       {/* Tabs */}
-      <div className="panel-card flex gap-1 p-1.5">
+      <div className="flex gap-2">
         {([
           { id: 'templates', label: 'Templates por status', icon: Settings },
           { id: 'send', label: 'Envio manual', icon: Send },
@@ -230,8 +230,10 @@ export function PushNotificationsPage() {
             key={id}
             type="button"
             onClick={() => setActiveTab(id)}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-              activeTab === id ? 'bg-coral-500 text-white' : 'text-ink-600 hover:bg-ink-50'
+            className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold transition ${
+              activeTab === id
+                ? 'border-coral-500 bg-coral-500 text-white'
+                : 'border-ink-100 bg-white text-ink-600 hover:bg-ink-50'
             }`}
           >
             <Icon className="h-4 w-4" />
@@ -264,11 +266,12 @@ export function PushNotificationsPage() {
           </div>
 
           {loadingTemplates ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => <div key={i} className="h-48 animate-pulse rounded-2xl bg-ink-50" />)}
+            <div className="grid gap-4 md:grid-cols-2">
+              {[1, 2, 3, 4].map((i) => <div key={i} className="h-48 animate-pulse rounded-2xl bg-ink-50" />)}
             </div>
           ) : (
-            TEMPLATE_TRIGGERS.map((trigger) => {
+            <div className="grid gap-4 md:grid-cols-2">
+              {TEMPLATE_TRIGGERS.map((trigger) => {
               const edit = editingTemplates[trigger] ?? { title: '', body: '', active: true }
               const isSaving = savingTemplate === trigger
 
@@ -373,7 +376,8 @@ export function PushNotificationsPage() {
                   </div>
                 </div>
               )
-            })
+            })}
+            </div>
           )}
         </div>
       )}
