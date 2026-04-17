@@ -777,3 +777,20 @@ export async function deleteIndustrializedProduct(id: number): Promise<void> {
   const { error } = await client().from('industrializados').delete().eq('id', id)
   if (error) throw error
 }
+
+export async function updateOrderStatus(orderId: string, status: string): Promise<void> {
+  const { error } = await client()
+    .from('orders')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', orderId)
+  if (error) throw error
+}
+
+export async function fetchOrderProfileId(orderId: string): Promise<string | null> {
+  const { data } = await client()
+    .from('orders')
+    .select('profile_id')
+    .eq('id', orderId)
+    .single()
+  return (data as { profile_id: string | null } | null)?.profile_id ?? null
+}
